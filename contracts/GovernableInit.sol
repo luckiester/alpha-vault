@@ -1,7 +1,7 @@
 pragma solidity 0.7.3;
 
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
-import "./VaultStorage.sol";
+import "./Storage.sol";
 
 // A clone of Governable supporting the Initializable interface and pattern
 contract GovernableInit is Initializable {

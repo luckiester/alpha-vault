@@ -6,13 +6,17 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-import "./inheritance/ControllableInit.sol";
+import "./interface/IStrategy.sol";
+import "./interface/IVault.sol";
+import "./interface/IController.sol";
+import "./interface/IUpgradeSource.sol";
+import "./ControllableInit.sol";
 import "./VaultStorage.sol";
 
-contract OnxAlpha is ERC20Upgradeable, VaultStrategy {
-  using SafeERC20 for IERC20;
-  using Address for address;
-  using SafeMath for uint256;
+contract OnxAlphaVault is ERC20Upgradeable, IVault, IUpgradeSource, ControllableInit, VaultStorage {
+  using SafeERC20Upgradeable for IERC20Upgradeable;
+  using AddressUpgradeable for address;
+  using SafeMathUpgradeable for uint256;
 
   event Withdraw(address indexed beneficiary, uint256 amount);
   event Deposit(address indexed beneficiary, uint256 amount);
@@ -25,8 +29,8 @@ contract OnxAlpha is ERC20Upgradeable, VaultStrategy {
     address _underlying
   ) public initializer {
     __ERC20_init(
-      string(abi.encodePacked("bFARM_", ERC20Upgradeable(_underlying).symbol())),
-      string(abi.encodePacked("bf", ERC20Upgradeable(_underlying).symbol()))
+      string(abi.encodePacked("alpha_", ERC20Upgradeable(_underlying).symbol())),
+      string(abi.encodePacked("alpha", ERC20Upgradeable(_underlying).symbol()))
     );
     _setupDecimals(ERC20Upgradeable(_underlying).decimals());
 
@@ -74,6 +78,27 @@ contract OnxAlpha is ERC20Upgradeable, VaultStrategy {
     _;
   }
 
+  function setStrategy(address _strategy) public override onlyControllerOrGovernance {
+    require(_strategy != address(0), "new _strategy cannot be empty");
+    require(IStrategy(_strategy).underlying() == address(underlying()), "Vault underlying must match Strategy underlying");
+    require(IStrategy(_strategy).vault() == address(this), "the strategy does not belong to this vault");
+
+    _setStrategy(_strategy);
+    IERC20Upgradeable(underlying()).safeApprove(address(strategy()), 0);
+    IERC20Upgradeable(underlying()).safeApprove(address(strategy()), uint256(~0));
+  }
+
+  // Only smart contracts will be affected by this modifier
+  modifier defense() {
+    require(
+      (msg.sender == tx.origin) ||                // If it is a normal user and not smart contract,
+                                                  // then the requirement will pass
+      !IController(controller()).greyList(msg.sender), // If it is a smart contract, then
+      "This smart contract has been grey listed"  // make sure that it is not on our greyList.
+    );
+    _;
+  }
+
   function stakeOnsenFarm() whenStrategyDefined onlyControllerOrGovernance external override {
     invest();
     IStrategy(strategy()).stakeOnsenFarm();
@@ -110,14 +135,6 @@ contract OnxAlpha is ERC20Upgradeable, VaultStrategy {
     return underlyingBalanceWithInvestment()
         .mul(balanceOf(holder))
         .div(totalSupply());
-  }
-
-  function strategyUpdateTime() public view returns (uint256) {
-    return _strategyUpdateTime();
-  }
-
-  function strategyTimeLock() public view returns (uint256) {
-    return _strategyTimeLock();
   }
   
   function rebalance() external onlyControllerOrGovernance {

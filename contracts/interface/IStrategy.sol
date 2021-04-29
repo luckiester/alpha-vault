@@ -15,6 +15,10 @@ interface IStrategy {
     // should only be called by controller
     function salvage(address recipient, address token, uint256 amount) external;
 
-    function doHardWork() external;
+    function stakeOnsenFarm() external;
+    function stakeSushiBar() external;
+    function stakeXSushiFarm() external;
+    function stakeOnx() external;
+    function harvest(uint256 _denom) external;
     function depositArbCheck() external view returns(bool);
 }

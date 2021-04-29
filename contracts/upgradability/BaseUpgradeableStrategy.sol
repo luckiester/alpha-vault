@@ -1,12 +1,12 @@
 pragma solidity 0.7.3;
 
-import "@openzeppelin/upgrades/contracts/Initializable.sol";
-import "./BaseUpgradeableStrategyStorage.sol";
-import "../ControllableInit.sol";
-import "../interface/IController.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "./BaseUpgradeableStrategyStorage.sol";
+import "../ControllableInit.sol";
+import "../interface/IController.sol";
 
 contract BaseUpgradeableStrategy is Initializable, ControllableInit, BaseUpgradeableStrategyStorage {
   using SafeMath for uint256;
@@ -33,10 +33,10 @@ contract BaseUpgradeableStrategy is Initializable, ControllableInit, BaseUpgrade
     address _storage,
     address _underlying,
     address _vault,
-    address _rewardPool,
-    address _rewardToken,
-    uint256 _profitSharingNumerator,
-    uint256 _profitSharingDenominator,
+    address _slpRewardPool,
+    address _slpRewardToken,
+    address _onxXSushiFarmRewardPool,
+    address _onxStakingRewardPool,
     bool _sell,
     uint256 _sellFloor,
     uint256 _implementationChangeDelay
@@ -46,10 +46,10 @@ contract BaseUpgradeableStrategy is Initializable, ControllableInit, BaseUpgrade
     );
     _setUnderlying(_underlying);
     _setVault(_vault);
-    _setRewardPool(_rewardPool);
-    _setRewardToken(_rewardToken);
-    _setProfitSharingNumerator(_profitSharingNumerator);
-    _setProfitSharingDenominator(_profitSharingDenominator);
+    _setSLPRewardPool(_slpRewardPool);
+    _setSLPRewardToken(_slpRewardToken);
+    _setOnxXSushiRewardPool(_onxXSushiFarmRewardPool);
+    _setOnxStakingRewardPool(_onxStakingRewardPool);
 
     _setSell(_sell);
     _setSellFloor(_sellFloor);

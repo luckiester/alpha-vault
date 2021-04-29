@@ -1,6 +1,9 @@
-const Controller = artifacts.require("Contoller");
+const Controller = artifacts.require("Controller");
 const Storage = artifacts.require("Storage");
-const Strategy = artifacts.require("AlphaStrategy");
+const Strategy = artifacts.require("Strategy");
+const Vault = artifacts.require("OnxAlphaVault");
+const VaultProxy = artifacts.require("VaultProxy");
+const IController = artifacts.require("IController");
 
 async function impersonates(targetAccounts){
   console.log("Impersonating...");
@@ -15,33 +18,45 @@ async function impersonates(targetAccounts){
   }
 }
 
-async function makeVault(...args) {
-  const vault = await Vault.new(...args);
+async function makeVault(implementationAddress, ...args) {
+  const fromParameter = args[args.length - 1]; // corresponds to {from: governance}
+  const vaultAsProxy = await VaultProxy.new(implementationAddress, fromParameter);
+  const vault = await Vault.at(vaultAsProxy.address);
+  await vault.initializeVault(...args);
   return vault;
 };
 
 async function setupCoreProtocol(underlying, governance) {
-  // create controller contract
-  const controller = await Controller.new();
   // create storage contract
-  const storage = await Storage.new();
+  const storageNew = await Storage.new({from: config.governance});
+  // create controller contract
+  const controllerNew = await Controller.new(storageNew.address, {from: governance});
+  await storageNew.setController(controllerNew.address, {from: config.governance});
+  const vaultNew = await Vault.new({from: config.governance});
 
   // deploy vault contract
-  vault = await makeVault(storage.address, underlying, {from: governance});
+  vault = await makeVault(vaultNew.address, storageNew.address, underlying.address, {from: governance});
   console.log("Vault deployed: ", vault.address);
 
   // deploy strategy
-  const strategy = await Strategy.new(vault.address, storage.address, {from: governance});
+  const strategy = await Strategy.new({from: governance});
+  await strategy.initializeStrategy(
+    storageNew.address,
+    vault.address,
+    { from: config.governance }
+  );
   console.log("Strategy Deployed: ", strategy.address);
+  await vault.setStrategy(strategy.address, { from: config.governance });
 
+  const controller = await IController.at(controllerNew.address);
   // set strategy to controller
   await controller.addVaultAndStrategy(vault.address, strategy.address);
 
-  return {
+  return [
     controller,
     vault,
     strategy
-  };
+  ];
 }
 
 async function depositVault(_farmer, _underlying, _vault, _amount) {

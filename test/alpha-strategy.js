@@ -4,17 +4,16 @@ const { impersonates, setupCoreProtocol, depositVault } = require("./utils/fork-
 const { send } = require("@openzeppelin/test-helpers");
 const BigNumber = require("bignumber.js");
 const IERC20 = artifacts.require("@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20");
-const IStakingPool = artifacts.require("IStakingPool");
 
 const wethstethLPAddress = "0x1C615074c281c5d88ACc6914D408d7E71Eb894EE";
 const onxAddress = "0xe0ad1806fd3e7edf6ff52fdb822432e847411033";
-const onxStakingPool =  "0x569C1E3e128893431449D2c6C0dc156f33f49B68";
+const onxStakingPool =  "0xa99F0aD2a539b2867fcfea47F7E71F240940B47c";
 
 describe("Alpha strategy test", function() {
   let accounts;
   let underlying;
 
-  let underlyingWhale = "0x9CE6E6B60C894d1DF9BC3D9D6cC969b79FB176B7"; 
+  let underlyingWhale = "0x767ecb395def19ab8d1b2fcc89b3ddfbed28fd6b"; 
 
   let governance;
   let farmer1;
@@ -23,10 +22,12 @@ describe("Alpha strategy test", function() {
 
   let controller, vault, strategy;
   let onx;
+  let stakedOnx;
 
   async function setupExternalContracts() {
     underlying = await IERC20.at(wethstethLPAddress);
     onx = await IERC20.at(onxAddress);
+    stakedOnx = await IERC20.at(onxStakingPool);
     console.log("Fetching Underlying at: ", underlying.address);
   }
 
@@ -35,6 +36,7 @@ describe("Alpha strategy test", function() {
     await send.ether(etherGiver, underlyingWhale, "1" + "000000000000000000");
 
     farmerBalance = await underlying.balanceOf(underlyingWhale);
+    console.log('farmerBalance:', farmerBalance.toString());
     Utils.assertBNGt(farmerBalance, 0);
     await underlying.transfer(farmer1, farmerBalance, {from: underlyingWhale});
   }
@@ -63,36 +65,37 @@ describe("Alpha strategy test", function() {
       let farmerVaultShare = new BigNumber(await vault.balanceOf(farmer1)).toFixed();
       console.log('farmerVaultShare: ', farmerVaultShare.toString());
 
-      let hours = 10;
+      let hours = 3;
 
       for (let i = 0; i < hours; i++) {
         console.log("loop ", i);
 
         let blocksPerHour = 2400;
-        await controller.stakeOnsenFarm({from: governance});
+        await controller.stakeOnsenFarm(vault.address, {from: governance});
         await Utils.advanceNBlock(blocksPerHour);
 
-        await controller.stakeSushiBar({from: governance});
+        await controller.stakeSushiBar(vault.address, {from: governance});
         await Utils.advanceNBlock(blocksPerHour);
 
-        await controller.stakeXSushiFarm({from: governance});
+        await controller.stakeXSushiFarm(vault.address, {from: governance});
         await Utils.advanceNBlock(blocksPerHour);
 
-        await controller.stakeOnx({from: governance});
+        await controller.stakeOnx(vault.address, {from: governance});
         await Utils.advanceNBlock(blocksPerHour);
 
-        console.log("onx in staking pool: ", IStakingPool(onxStakingPool).earned(controller.address));
+        let stakedOnxBalance = new BigNumber(await stakedOnx.balanceOf(strategy.address));
+        console.log("onx in staking pool: ", stakedOnxBalance.toFixed());
       }
 
-      await vault.harvest({from: farmer1});
-      await vault.withdraw({from: farmer1});
+      // await vault.harvest({from: farmer1});
+      // await vault.withdraw({from: farmer1});
 
-      let farmerNewBalance = new BigNumber(await underlying.balanceOf(farmer1));
-      let farmerOnxAmount = new BigNumber(await onx.balanceOf(farmer1));
+      // let farmerNewBalance = new BigNumber(await underlying.balanceOf(farmer1));
+      // let farmerOnxAmount = new BigNumber(await onx.balanceOf(farmer1));
 
-      console.log("farmerOnxAmount: ", farmerOnxAmount.toFixed());
-      console.log("farmerOldBalance: ", farmerOldBalance.toFixed());
-      console.log("farmerNewBalance: ", farmerNewBalance.toFixed());
+      // console.log("farmerOnxAmount: ", farmerOnxAmount.toFixed());
+      // console.log("farmerOldBalance: ", farmerOldBalance.toFixed());
+      // console.log("farmerNewBalance: ", farmerNewBalance.toFixed());
     })
   })
 });

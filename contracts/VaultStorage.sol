@@ -1,11 +1,13 @@
 pragma solidity 0.7.3;
 
-import "@openzeppelin/upgrades/contracts/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 
 contract VaultStorage is Initializable {
   bytes32 internal constant _STRATEGY_SLOT = 0xf1a169aa0f736c2813818fdfbdc5755c31e0839c8f49831a16543496b28574ea;
   bytes32 internal constant _UNDERLYING_SLOT = 0x1994607607e11d53306ef62e45e3bd85762c58d9bf38b5578bc4a258a26a7371;
   bytes32 internal constant _UNDERLYING_UNIT_SLOT = 0xa66bc57d4b4eed7c7687876ca77997588987307cb13ecc23f5e52725192e5fff;
+  bytes32 internal constant _NEXT_IMPLEMENTATION_SLOT = 0xb1acf527cd7cd1668b30e5a9a1c0d845714604de29ce560150922c9d8c0937df;
+  bytes32 internal constant _NEXT_IMPLEMENTATION_TIMESTAMP_SLOT = 0x3bc747f4b148b37be485de3223c90b4468252967d2ea7f9fcbd8b6e653f434c9;
   bytes32 internal constant _NEXT_IMPLEMENTATION_DELAY_SLOT = 0x82ddc3be3f0c1a6870327f78f4979a0b37b21b16736ef5be6a7a7a35e530bcf0;
   bytes32 internal constant _STRATEGY_TIME_LOCK_SLOT = 0x6d02338b2e4c913c0f7d380e2798409838a48a2c4d57d52742a808c82d713d8b;
 
@@ -17,8 +19,6 @@ contract VaultStorage is Initializable {
     assert(_NEXT_IMPLEMENTATION_TIMESTAMP_SLOT == bytes32(uint256(keccak256("eip1967.vaultStorage.nextImplementationTimestamp")) - 1));
     assert(_NEXT_IMPLEMENTATION_DELAY_SLOT == bytes32(uint256(keccak256("eip1967.vaultStorage.nextImplementationDelay")) - 1));
     assert(_STRATEGY_TIME_LOCK_SLOT == bytes32(uint256(keccak256("eip1967.vaultStorage.strategyTimeLock")) - 1));
-    assert(_FUTURE_STRATEGY_SLOT == bytes32(uint256(keccak256("eip1967.vaultStorage.futureStrategy")) - 1));
-    assert(_STRATEGY_UPDATE_TIME_SLOT == bytes32(uint256(keccak256("eip1967.vaultStorage.strategyUpdateTime")) - 1));
   }
 
   function initialize(
@@ -31,7 +31,6 @@ contract VaultStorage is Initializable {
     _setUnderlyingUnit(_underlyingUnit);
     _setNextImplementationDelay(_implementationChangeDelay);
     _setStrategyTimeLock(_strategyChangeDelay);
-    _setStrategyUpdateTime(0);
   }
 
   function _setStrategy(address _address) internal {
@@ -88,14 +87,6 @@ contract VaultStorage is Initializable {
 
   function _strategyTimeLock() internal view returns (uint256) {
     return getUint256(_STRATEGY_TIME_LOCK_SLOT);
-  }
-
-  function _setStrategyUpdateTime(uint256 _value) internal {
-    setUint256(_STRATEGY_UPDATE_TIME_SLOT, _value);
-  }
-
-  function _strategyUpdateTime() internal view returns (uint256) {
-    return getUint256(_STRATEGY_UPDATE_TIME_SLOT);
   }
 
   function setBoolean(bytes32 slot, bool _value) internal {
