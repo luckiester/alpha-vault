@@ -65,7 +65,7 @@ describe("Alpha strategy test", function() {
       let farmerVaultShare = new BigNumber(await vault.balanceOf(farmer1)).toFixed();
       console.log('farmerVaultShare: ', farmerVaultShare.toString());
 
-      let hours = 3;
+      let hours = 10;
 
       for (let i = 0; i < hours; i++) {
         console.log("loop ", i);
@@ -87,15 +87,15 @@ describe("Alpha strategy test", function() {
         console.log("onx in staking pool: ", stakedOnxBalance.toFixed());
       }
 
-      // await vault.harvest({from: farmer1});
-      // await vault.withdraw({from: farmer1});
+      await vault.harvest({from: farmer1});
+      await vault.withdraw(farmerVaultShare, {from: farmer1});
 
-      // let farmerNewBalance = new BigNumber(await underlying.balanceOf(farmer1));
-      // let farmerOnxAmount = new BigNumber(await onx.balanceOf(farmer1));
+      let farmerNewBalance = new BigNumber(await underlying.balanceOf(farmer1));
+      let farmerOnxAmount = new BigNumber(await onx.balanceOf(farmer1));
 
-      // console.log("farmerOnxAmount: ", farmerOnxAmount.toFixed());
-      // console.log("farmerOldBalance: ", farmerOldBalance.toFixed());
-      // console.log("farmerNewBalance: ", farmerNewBalance.toFixed());
+      console.log("farmerOnxAmount: ", farmerOnxAmount.toFixed());
+      console.log("farmerOldBalance: ", farmerOldBalance.toFixed());
+      console.log("farmerNewBalance: ", farmerNewBalance.toFixed());
     })
   })
 });

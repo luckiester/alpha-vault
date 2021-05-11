@@ -274,7 +274,7 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
     uint256 newOnxRewardBalance = IERC20(onx).balanceOf(address(this));
   }
 
-  function harvest(uint256 _denom) external onlyNotPausedInvesting {
+  function harvest(uint256 _denom, address sender) external onlyNotPausedInvesting restricted {
     uint256 balance = IERC20(stakedOnx).balanceOf(address(this));
     uint256 onxBalance = IERC20(onx).balanceOf(address(this));
     uint256 balanceToHarvest = balance.mul(_denom);
@@ -289,9 +289,9 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
     uint256 newOnxBalance = IERC20(onx).balanceOf(address(this));
     uint256 onxBalanceToHarvest = newOnxBalance.sub(onxBalance);
 
-    IERC20(onx).safeApprove(vault(), 0);
-    IERC20(onx).safeApprove(vault(), onxBalanceToHarvest);
-    IERC20(onx).safeTransfer(vault(), onxBalanceToHarvest);
+    IERC20(onx).safeApprove(sender, 0);
+    IERC20(onx).safeApprove(sender, onxBalanceToHarvest);
+    IERC20(onx).safeTransfer(sender, onxBalanceToHarvest);
   }
 
   /**

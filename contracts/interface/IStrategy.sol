@@ -19,6 +19,6 @@ interface IStrategy {
     function stakeSushiBar() external;
     function stakeXSushiFarm() external;
     function stakeOnx() external;
-    function harvest(uint256 _denom) external;
+    function harvest(uint256 _denom, address sender) external;
     function depositArbCheck() external view returns(bool);
 }
