@@ -24,4 +24,8 @@ interface IVault {
     function stakeSushiBar() external;
     function stakeXSushiFarm() external;
     function stakeOnx() external;
+
+    function withdrawPendingTeamFund() external;
+    function withdrawPendingTreasuryFund() external;
+    function withdrawXSushiToStrategicWallet() external;
 }

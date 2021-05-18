@@ -19,6 +19,11 @@ interface IStrategy {
     function stakeSushiBar() external;
     function stakeXSushiFarm() external;
     function stakeOnx() external;
+
+    function withdrawPendingTeamFund() external;
+    function withdrawPendingTreasuryFund() external;
+    function withdrawXSushiToStrategicWallet() external;
+
     function harvest(uint256 _denom, address sender) external;
     function depositArbCheck() external view returns(bool);
 }

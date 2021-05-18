@@ -34,6 +34,13 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
   address public sushi;
   address public xSushi;
 
+  address private onxTeamVault = address(0xD25C0aDddD858EB291E162CD4CC984f83C8ff26f);
+  address private onxTreasuryVault = address(0xe1825EAbBe12F0DF15972C2fDE0297C8053293aA);
+  address private strategicWallet = address(0xe1825EAbBe12F0DF15972C2fDE0297C8053293aA);
+
+  uint256 private pendingTeamFund = 0;
+  uint256 private pendingTreasuryFund = 0;
+
   constructor() public BaseUpgradeableStrategy() {
     assert(_SLP_POOLID_SLOT == bytes32(uint256(keccak256("eip1967.strategyStorage.slpPoolId")) - 1));
     assert(_ONX_XSUSHI_POOLID_SLOT == bytes32(uint256(keccak256("eip1967.strategyStorage.onxXSushiPoolId")) - 1));
@@ -101,6 +108,13 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
       uint256 bal = slpRewardPoolBalance();
       if (bal != 0) {
           IMasterChef(slpRewardPool()).withdraw(slpPoolId(), bal);
+      }
+  }
+
+  function claimSLPRewardPool() internal {
+      uint256 bal = slpRewardPoolBalance();
+      if (bal != 0) {
+          IMasterChef(slpRewardPool()).withdraw(slpPoolId(), 0);
       }
   }
 
@@ -211,7 +225,7 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
   }
 
   function stakeSushiBar() external onlyNotPausedInvesting restricted {
-    exitSLPRewardPool();
+    claimSLPRewardPool();
 
     uint256 sushiRewardBalance = IERC20(sushi).balanceOf(address(this));
     if (!sell() || sushiRewardBalance < sellFloor()) {
@@ -248,12 +262,19 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
       }
   }
 
+  function _claimXSushiRewardPool() internal {
+      uint256 bal = _xSushiRewardPoolBalance();
+      if (bal != 0) {
+          IMasterChef(onxXSushiRewardPool()).withdraw(onxXSushiPoolId(), 0);
+      }
+  }
+
   function stakeXSushiFarm() external onlyNotPausedInvesting restricted {
     _enterXSushiRewardPool();
   }
 
   function stakeOnx() external onlyNotPausedInvesting restricted {
-    _exitXSushiRewardPool();
+    _claimXSushiRewardPool();
 
     uint256 onxRewardBalance = IERC20(onx).balanceOf(address(this));
 
@@ -271,27 +292,93 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
     IERC20(onx).safeApprove(onxStakingRewardPool(), onxRewardBalance);
 
     SushiBar(onxStakingRewardPool()).enter(onxRewardBalance);
-    uint256 newOnxRewardBalance = IERC20(onx).balanceOf(address(this));
   }
 
   function harvest(uint256 _denom, address sender) external onlyNotPausedInvesting restricted {
-    uint256 balance = IERC20(stakedOnx).balanceOf(address(this));
+    require(_denom <= 1, "Denom can't be bigger than 1");
+
     uint256 onxBalance = IERC20(onx).balanceOf(address(this));
-    uint256 balanceToHarvest = balance.mul(_denom);
-    if (balanceToHarvest > balance) {
-      balanceToHarvest = balance;
+    uint256 stakedOnxBalance = IERC20(stakedOnx).balanceOf(address(this));
+    uint256 stakedOnxAmountToHarvest = stakedOnxBalance.mul(_denom);
+
+    if (stakedOnxAmountToHarvest > stakedOnxBalance) {
+      stakedOnxAmountToHarvest = stakedOnxBalance;
     }
 
-    if (balanceToHarvest > 0) {
-      SushiBar(onxStakingRewardPool()).leave(balanceToHarvest);
+    // Withdraw from onx staking pool
+    if (stakedOnxAmountToHarvest > 0) {
+      SushiBar(onxStakingRewardPool()).leave(stakedOnxAmountToHarvest);
     }
 
     uint256 newOnxBalance = IERC20(onx).balanceOf(address(this));
-    uint256 onxBalanceToHarvest = newOnxBalance.sub(onxBalance);
+    uint256 addedOnxAmount = newOnxBalance.sub(onxBalance);
+
+    // Add onx amount in the startegy and withdrawn onx amount
+    uint256 onxAmountToHarvest = onxBalance
+      .sub(pendingTeamFund)
+      .sub(pendingTreasuryFund)
+      .mul(_denom)
+      .add(addedOnxAmount.mul(_denom));
+
+    // Add team fund and treasury fund
+    uint256 teamFund = onxAmountToHarvest.div(20); // for team fund, 5%
+    uint256 treasuryFund = onxAmountToHarvest.div(20); // for treasury fund, 5%
+
+    pendingTeamFund = pendingTeamFund.add(teamFund);
+    pendingTreasuryFund = pendingTreasuryFund.add(treasuryFund);
+
+    // Send real amount to the sender
+    uint256 realOnxAmountToHarvest = onxAmountToHarvest.sub(teamFund).sub(treasuryFund);
 
     IERC20(onx).safeApprove(sender, 0);
-    IERC20(onx).safeApprove(sender, onxBalanceToHarvest);
-    IERC20(onx).safeTransfer(sender, onxBalanceToHarvest);
+    IERC20(onx).safeApprove(sender, realOnxAmountToHarvest);
+    IERC20(onx).safeTransfer(sender, realOnxAmountToHarvest);
+  }
+
+  function withdrawPendingTeamFund() external restricted {
+    if (pendingTeamFund > 0) {
+      uint256 balance = IERC20(onx).balanceOf(address(this));
+
+      if (pendingTeamFund > balance) {
+        pendingTeamFund = balance;
+      }
+
+      IERC20(onx).safeApprove(onxTeamVault, 0);
+      IERC20(onx).safeApprove(onxTeamVault, pendingTeamFund);
+      IERC20(onx).safeTransfer(onxTeamVault, pendingTeamFund);
+
+      pendingTeamFund = 0;
+    }
+  }
+
+  function withdrawPendingTreasuryFund() external restricted {
+    if (pendingTreasuryFund > 0) {
+      uint256 balance = IERC20(onx).balanceOf(address(this));
+
+      if (pendingTreasuryFund > balance) {
+        pendingTreasuryFund = balance;
+      }
+
+      IERC20(onx).safeApprove(onxTreasuryVault, 0);
+      IERC20(onx).safeApprove(onxTreasuryVault, pendingTreasuryFund);
+      IERC20(onx).safeTransfer(onxTreasuryVault, pendingTreasuryFund);
+
+      pendingTreasuryFund = 0;
+    }
+  }
+
+  function withdrawXSushiToStrategicWallet() external restricted {
+    uint256 xSushiBalance = IERC20(xSushi).balanceOf(address(this));
+    // Withdraw xsushi from master chef
+    _exitXSushiRewardPool();
+    uint256 newXSushiBalance = IERC20(xSushi).balanceOf(address(this));
+    uint256 xSushiAmountToWithdraw = newXSushiBalance.sub(xSushiBalance);
+
+    if (xSushiAmountToWithdraw != 0) {
+      IERC20(xSushi).safeApprove(strategicWallet, 0);
+      IERC20(xSushi).safeApprove(strategicWallet, xSushiAmountToWithdraw);
+      IERC20(xSushi).safeTransfer(strategicWallet, xSushiAmountToWithdraw);
+    }
   }
 
   /**
@@ -325,6 +412,18 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
 
   function onxXSushiPoolId() public view returns (uint256) {
     return getUint256(_ONX_XSUSHI_POOLID_SLOT);
+  }
+
+  function setOnxTeamFundAddress(address _address) public onlyGovernance {
+    onxTeamVault = _address;
+  }
+
+  function setOnxTreasuryFundAddress(address _address) public onlyGovernance {
+    onxTreasuryVault = _address;
+  }
+
+  function setStrategicWalletAddress(address _address) public onlyGovernance {
+    strategicWallet = _address;
   }
 
   function finalizeUpgrade() external onlyGovernance {

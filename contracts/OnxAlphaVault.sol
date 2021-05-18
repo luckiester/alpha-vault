@@ -115,6 +115,18 @@ contract OnxAlphaVault is ERC20Upgradeable, IVault, IUpgradeSource, Controllable
   function stakeOnx() whenStrategyDefined onlyControllerOrGovernance external override {
     IStrategy(strategy()).stakeOnx();
   }
+
+  function withdrawPendingTeamFund() whenStrategyDefined onlyControllerOrGovernance external override {
+    IStrategy(strategy()).withdrawPendingTeamFund();
+  }
+
+  function withdrawPendingTreasuryFund() whenStrategyDefined onlyControllerOrGovernance external override {
+    IStrategy(strategy()).withdrawPendingTreasuryFund();
+  }
+
+  function withdrawXSushiToStrategicWallet() whenStrategyDefined onlyControllerOrGovernance external override {
+    IStrategy(strategy()).withdrawXSushiToStrategicWallet();
+  }
   
   function underlyingBalanceInVault() view public override returns (uint256) {
     return IERC20Upgradeable(underlying()).balanceOf(address(this));
