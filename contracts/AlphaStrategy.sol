@@ -1,34 +1,20 @@
 pragma solidity 0.7.3;
 
 import "@openzeppelin/contracts/math/Math.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
 // import "@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "./interface/uniswap/IUniswapV2Router02.sol";
-import "./interface/IStrategy.sol";
-import "./interface/IVault.sol";
 import "./upgradability/BaseUpgradeableStrategy.sol";
-import "./interface/uniswap/IUniswapV2Pair.sol";
 import "./interface/SushiBar.sol";
 import "./interface/IMasterChef.sol";
-import "hardhat/console.sol";
 
 contract AlphaStrategy is BaseUpgradeableStrategy {
 
   using SafeMath for uint256;
   using SafeERC20 for IERC20;
 
-  address public constant uniswapRouterV2 = address(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
-  address public constant sushiswapRouterV2 = address(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F);
-
   // additional storage slots (on top of BaseUpgradeableStrategy ones) are defined here
   bytes32 internal constant _SLP_POOLID_SLOT = 0x8956ecb40f9dfb494a392437d28a65bb0ddc57b20a9b6274df098a6daa528a72;
   bytes32 internal constant _ONX_XSUSHI_POOLID_SLOT = 0x3a59bce91ecc6237acab7341062d132e6dcb920d0fe2ca5f3a8e08755ef691e7;
 
-  // this would be reset on each upgrade
-  mapping (address => address[]) public uniswapRoutes;
-
-  address public sushiBar;
   address public onx;
   address public stakedOnx;
   address public sushi;
@@ -38,25 +24,26 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
   address private onxTreasuryVault = address(0xe1825EAbBe12F0DF15972C2fDE0297C8053293aA);
   address private strategicWallet = address(0xe1825EAbBe12F0DF15972C2fDE0297C8053293aA);
 
-  uint256 private pendingTeamFund = 0;
-  uint256 private pendingTreasuryFund = 0;
+  // address onxTeamVault;
+  // address onxTreasuryVault;
+  // address strategicWallet;
+
+  uint256 private pendingTeamFund;
+  uint256 private pendingTreasuryFund;
 
   constructor() public BaseUpgradeableStrategy() {
     assert(_SLP_POOLID_SLOT == bytes32(uint256(keccak256("eip1967.strategyStorage.slpPoolId")) - 1));
     assert(_ONX_XSUSHI_POOLID_SLOT == bytes32(uint256(keccak256("eip1967.strategyStorage.onxXSushiPoolId")) - 1));
   }
 
-  function initializeStrategy(
+  function initializeAlphaStrategy(
     address _storage,
     address _underlying,
     address _vault,
     address _slpRewardPool,
-    address _slpRewardToken,
     uint256 _slpPoolID,
-    address _sushiBar,
     address _onxXSushiFarmRewardPool,
     uint256 _onxXSushiPoolId,
-    address _onxStakingRewardPool,
     address _onx,
     address _stakedOnx,
     address _sushi,
@@ -68,9 +55,9 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
       _underlying,
       _vault,
       _slpRewardPool,
-      _slpRewardToken,
+      _sushi,
       _onxXSushiFarmRewardPool,
-      _onxStakingRewardPool,
+      _stakedOnx,
       true, // sell
       0, // sell floor
       12 hours // implementation change delay
@@ -82,22 +69,10 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
     _setSLPPoolId(_slpPoolID);
     _setOnxXSushiPoolId(_onxXSushiPoolId);
 
-    address uniLPComponentToken0 = IUniswapV2Pair(underlying()).token0();
-    address uniLPComponentToken1 = IUniswapV2Pair(underlying()).token1();
-
     onx = _onx;
     sushi = _sushi;
     xSushi = _xSushi;
-    sushiBar = _sushiBar;
     stakedOnx = _stakedOnx;
-
-    // these would be required to be initialized separately by governance
-    uniswapRoutes[uniLPComponentToken0] = new address[](0);
-    uniswapRoutes[uniLPComponentToken1] = new address[](0);
-  }
-
-  function depositArbCheck() public view returns(bool) {
-    return true;
   }
 
   function slpRewardPoolBalance() internal view returns (uint256 bal) {
@@ -125,15 +100,13 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
       }
   }
 
-  function unsalvagableTokens(address token) public view returns (bool) {
-    return (token == slpRewardToken() || token == underlying());
-  }
-
   function enterSLPRewardPool() internal {
     uint256 entireBalance = IERC20(underlying()).balanceOf(address(this));
-    IERC20(underlying()).safeApprove(slpRewardPool(), 0);
-    IERC20(underlying()).safeApprove(slpRewardPool(), entireBalance);
-    IMasterChef(slpRewardPool()).deposit(slpPoolId(), entireBalance);
+    if (entireBalance > 0) {
+      IERC20(underlying()).safeApprove(slpRewardPool(), 0);
+      IERC20(underlying()).safeApprove(slpRewardPool(), entireBalance);
+      IMasterChef(slpRewardPool()).deposit(slpPoolId(), entireBalance);
+    }
   }
 
   /*
@@ -152,17 +125,6 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
 
   function continueInvesting() public onlyGovernance {
     _setPausedInvesting(false);
-  }
-
-  /*
-  *   Stakes everything the strategy holds into the reward pool
-  */
-  function investAllUnderlying() internal onlyNotPausedInvesting {
-    // this check is needed, because most of the SNX reward pools will revert if
-    // you try to stake(0).
-    if(IERC20(underlying()).balanceOf(address(this)) > 0) {
-      enterSLPRewardPool();
-    }
   }
 
   /*
@@ -210,18 +172,8 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
     return slpRewardPoolBalance().add(IERC20(underlying()).balanceOf(address(this)));
   }
 
-  /*
-  *   Governance or Controller can claim coins that are somehow transferred into the contract
-  *   Note that they cannot come in take away coins that are used and defined in the strategy itself
-  */
-  function salvage(address recipient, address token, uint256 amount) external onlyControllerOrGovernance {
-     // To make sure that governance cannot come in and take away the coins
-    require(!unsalvagableTokens(token), "token is defined as not salvagable");
-    IERC20(token).safeTransfer(recipient, amount);
-  }
-
   function stakeOnsenFarm() external onlyNotPausedInvesting restricted {
-    investAllUnderlying();
+    enterSLPRewardPool();
   }
 
   function stakeSushiBar() external onlyNotPausedInvesting restricted {
@@ -238,10 +190,10 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
       return;
     }
 
-    IERC20(sushi).safeApprove(sushiBar, 0);
-    IERC20(sushi).safeApprove(sushiBar, sushiRewardBalance);
+    IERC20(sushi).safeApprove(xSushi, 0);
+    IERC20(sushi).safeApprove(xSushi, sushiRewardBalance);
 
-    SushiBar(sushiBar).enter(sushiRewardBalance);
+    SushiBar(xSushi).enter(sushiRewardBalance);
   }
 
   function _enterXSushiRewardPool() internal {

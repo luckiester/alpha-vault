@@ -89,14 +89,6 @@ contract VaultStorage is Initializable {
     return getUint256(_STRATEGY_TIME_LOCK_SLOT);
   }
 
-  function setBoolean(bytes32 slot, bool _value) internal {
-    setUint256(slot, _value ? 1 : 0);
-  }
-
-  function getBoolean(bytes32 slot) internal view returns (bool) {
-    return (getUint256(slot) == 1);
-  }
-
   function setAddress(bytes32 slot, address _address) private {
     // solhint-disable-next-line no-inline-assembly
     assembly {

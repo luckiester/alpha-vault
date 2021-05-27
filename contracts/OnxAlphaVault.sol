@@ -74,14 +74,14 @@ contract OnxAlphaVault is ERC20Upgradeable, IVault, IUpgradeSource, Controllable
   }
 
   modifier whenStrategyDefined() {
-    require(address(strategy()) != address(0), "Strategy must be defined");
+    require(address(strategy()) != address(0), "undefined strategy");
     _;
   }
 
   function setStrategy(address _strategy) public override onlyControllerOrGovernance {
-    require(_strategy != address(0), "new _strategy cannot be empty");
-    require(IStrategy(_strategy).underlying() == address(underlying()), "Vault underlying must match Strategy underlying");
-    require(IStrategy(_strategy).vault() == address(this), "the strategy does not belong to this vault");
+    require(_strategy != address(0), "empty strategy");
+    require(IStrategy(_strategy).underlying() == address(underlying()), "underlying not match");
+    require(IStrategy(_strategy).vault() == address(this), "strategy vault not match");
 
     _setStrategy(_strategy);
     IERC20Upgradeable(underlying()).safeApprove(address(strategy()), 0);
@@ -94,7 +94,7 @@ contract OnxAlphaVault is ERC20Upgradeable, IVault, IUpgradeSource, Controllable
       (msg.sender == tx.origin) ||                // If it is a normal user and not smart contract,
                                                   // then the requirement will pass
       !IController(controller()).greyList(msg.sender), // If it is a smart contract, then
-      "This smart contract has been grey listed"  // make sure that it is not on our greyList.
+      "grey listed"  // make sure that it is not on our greyList.
     );
     _;
   }
@@ -186,8 +186,8 @@ contract OnxAlphaVault is ERC20Upgradeable, IVault, IUpgradeSource, Controllable
   }
 
   function withdraw(uint256 numberOfShares) override external {
-    require(totalSupply() > 0, "Vault has no shares");
-    require(numberOfShares > 0, "numberOfShares must be greater than 0");
+    require(totalSupply() > 0, "no shares");
+    require(numberOfShares > 0, "numberOfShares zero");
     uint256 totalSupply = totalSupply();
     _burn(msg.sender, numberOfShares);
 
@@ -215,8 +215,8 @@ contract OnxAlphaVault is ERC20Upgradeable, IVault, IUpgradeSource, Controllable
   }
 
   function _deposit(uint256 amount, address sender, address beneficiary) internal {
-    require(amount > 0, "Cannot deposit 0");
-    require(beneficiary != address(0), "holder must be defined");
+    require(amount > 0, "deposit 0");
+    require(beneficiary != address(0), "holder undefined");
 
     uint256 toMint = totalSupply() == 0
         ? amount

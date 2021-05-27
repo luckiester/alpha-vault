@@ -17,17 +17,14 @@ contract Strategy is AlphaStrategy {
     address onx = address(0xE0aD1806Fd3E7edF6FF52Fdb822432e847411033);
     address xSushi = address(0x8798249c2E607446EfB7Ad49eC89dD1865Ff4272);
     address sushi = address(0x6B3595068778DD592e39A122f4f5a5cF09C90fE2);
-    AlphaStrategy.initializeStrategy(
+    AlphaStrategy.initializeAlphaStrategy(
       _storage,
       underlying,
       _vault,
       slpRewardPool, // master chef contract
-      sushi, // master chef reward token
       137,  // SLP Pool id
-      xSushi, // SushiBar address,
       onxXSushiFarmRewardPool,
       7,
-      stakedOnx, // Onx Staking Reward Pool address,
       onx,
       stakedOnx,
       sushi,
