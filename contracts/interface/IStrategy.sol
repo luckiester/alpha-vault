@@ -24,9 +24,6 @@ interface IStrategy {
     function withdrawPendingTreasuryFund() external;
     function withdrawXSushiToStrategicWallet() external;
 
-    function harvest(uint256 _denom, address sender) external;
-    function depositArbCheck() external view returns(bool);
-
     function updateAccPerShare(address user) external;
     function pendingReward() external view returns (uint256);
     function pendingRewardOfUser(address user) external view returns (uint256);

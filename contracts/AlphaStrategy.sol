@@ -92,6 +92,20 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
     tAlpha = new TAlphaToken();
   }
 
+  // Salvage functions
+  function unsalvagableTokens(address token) public view returns (bool) {
+    return (token == rewardToken() || token == underlying() || token == vToken());
+  }
+
+  /**
+  * Salvages a token.
+  */
+  function salvage(address recipient, address token, uint256 amount) public onlyGovernance {
+    // To make sure that governance cannot come in and take away the coins
+    require(!unsalvagableTokens(token), "token is defined as not salvagable");
+    IBEP20(token).safeTransfer(recipient, amount);
+  }
+
   // Reward time based model functions
 
   modifier onlyVault() {
@@ -388,43 +402,6 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
     SushiBar(onxStakingRewardPool()).enter(onxRewardBalance);
   }
 
-  // ---
-
-  function harvest(uint256 _denom, address sender) external onlyNotPausedInvesting restricted {
-    require(_denom <= 1, "Denom can't be bigger than 1");
-
-    uint256 stakedOnxBalance = IERC20(stakedOnx).balanceOf(address(this));
-    uint256 stakedOnxAmountToHarvest = stakedOnxBalance.mul(_denom);
-
-    uint256 xSushiBalance = IERC20(xSushi).balanceOf(address(this));
-    uint256 xSushiAmountToHarvest = xSushiBalance.mul(_denom);
-
-    if (stakedOnxAmountToHarvest > stakedOnxBalance) {
-      stakedOnxAmountToHarvest = stakedOnxBalance;
-    }
-
-    if (xSushiAmountToHarvest > xSushiBalance) {
-      xSushiAmountToHarvest = xSushiBalance;
-    }
-
-    // Add team fund and treasury fund
-    uint256 teamFund = stakedOnxAmountToHarvest.div(20); // for team fund, 5%
-    uint256 treasuryFund = stakedOnxAmountToHarvest.div(20); // for treasury fund, 5%
-
-    pendingTeamFund = pendingTeamFund.add(teamFund);
-    pendingTreasuryFund = pendingTreasuryFund.add(treasuryFund);
-
-    stakedOnxAmountToHarvest = stakedOnxAmountToHarvest.sub(teamFund).sub(treasuryFund);
-
-    // IERC20(stakedOnx).safeApprove(sender, 0);
-    // IERC20(stakedOnx).safeApprove(sender, stakedOnxAmountToHarvest);
-    // IERC20(stakedOnx).safeTransfer(sender, stakedOnxAmountToHarvest);
-
-    IERC20(xSushi).safeApprove(sender, 0);
-    IERC20(xSushi).safeApprove(sender, xSushiAmountToHarvest);
-    IERC20(xSushi).safeTransfer(sender, xSushiAmountToHarvest);
-  }
-
   function withdrawPendingTeamFund() external restricted {
     if (pendingTeamFund > 0) {
       uint256 balance = IERC20(stakedOnx).balanceOf(address(this));
@@ -456,20 +433,6 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
       pendingTreasuryFund = 0;
     }
   }
-
-  // function withdrawXSushiToStrategicWallet() external restricted {
-  //   uint256 xSushiBalance = IERC20(xSushi).balanceOf(address(this));
-  //   // Withdraw xsushi from master chef
-  //   _exitXSushiRewardPool();
-  //   uint256 newXSushiBalance = IERC20(xSushi).balanceOf(address(this));
-  //   uint256 xSushiAmountToWithdraw = newXSushiBalance.sub(xSushiBalance);
-
-  //   if (xSushiAmountToWithdraw != 0) {
-  //     IERC20(xSushi).safeApprove(strategicWallet, 0);
-  //     IERC20(xSushi).safeApprove(strategicWallet, xSushiAmountToWithdraw);
-  //     IERC20(xSushi).safeTransfer(strategicWallet, xSushiAmountToWithdraw);
-  //   }
-  // }
 
   /**
   * Can completely disable claiming UNI rewards and selling. Good for emergency withdraw in the

@@ -170,17 +170,6 @@ contract OnxAlphaVault is ERC20Upgradeable, IVault, IUpgradeSource, Controllable
     IStrategy(strategy()).withdrawAllToVault();
   }
 
-  function harvest() external {
-    uint256 numberOfShares = balanceOf(msg.sender);
-    uint256 totalShares = totalSupply();
-
-    if (numberOfShares > totalShares) {
-      numberOfShares = totalShares;
-    }
-    uint256 denom = numberOfShares.div(totalShares);
-    IStrategy(strategy()).harvest(denom, msg.sender);
-  }
-
   function withdraw(uint256 numberOfShares) override external {
     require(totalSupply() > 0, "no shares");
     require(numberOfShares > 0, "numberOfShares zero");
