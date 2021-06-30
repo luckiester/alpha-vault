@@ -8,4 +8,7 @@ deployments
 dev-keys.json
 package-lock.json
 
+script
+hardhat.config.js
+
 .DS_Store

@@ -113,8 +113,7 @@ describe("Alpha strategy test", function() {
         let xSushiBalanceForStrategy = new BigNumber(await xSushi.balanceOf(strategy.address));
         console.log("xSushi in staking pool: ", xSushiBalanceForStrategy.toFixed());
       }
-
-      await vault.harvest({from: farmer1});
+      
       await vault.withdraw(farmerVaultShare, {from: farmer1});
       await vault.withdrawPendingTeamFund({from: governance});
       await vault.withdrawPendingTreasuryFund({from: governance});

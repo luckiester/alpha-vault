@@ -126,7 +126,7 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
 
     curPendingXSushi = pendingXSushi();
 
-    if (lastPendingXSushi > 0 && curPendingXSushi < lastPendingSushi) {
+    if (lastPendingXSushi > 0 && curPendingXSushi < lastPendingXSushi) {
       curPendingXSushi = 0;
       lastPendingXSushi = 0;
       accXSushiPerShare = 0;
@@ -155,25 +155,27 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
 
   function pendingRewardOfUser(address user) external view returns (uint256, uint256) {
     uint256 totalSupply = IERC20(vault()).totalSupply();
-    if (totalSupply == 0) return 0;
+    uint256 userBalance = IERC20(vault()).balanceOf(user);
+    if (totalSupply == 0) return (0, 0);
+
     uint256 allPendingReward = pendingReward();
-    if (allPendingReward < lastPendingReward) return 0;
+    if (allPendingReward < lastPendingReward) return (0, 0);
     uint256 addedReward = allPendingReward.sub(lastPendingReward);
     uint256 newAccRewardPerShare = accRewardPerShare.add(
         (addedReward.mul(1e36)).div(totalSupply)
     );
 
     uint256 allPendingXSushi = pendingXSushi();
-    if (allPendingXSushi < lastPendingXSushi) return 0;
+    if (allPendingXSushi < lastPendingXSushi) return (0, 0);
     addedReward = allPendingXSushi.sub(lastPendingXSushi);
     uint256 newAccXSushiPerShare = accXSushiPerShare.add(
         (addedReward.mul(1e36)).div(totalSupply)
     );
 
     return (
-      IERC20(vault()).balanceOf(user).mul(newAccRewardPerShare).div(1e36).sub(
+      userBalance.mul(newAccRewardPerShare).div(1e36).sub(
           userRewardDebt[user]
-      ), IERC20(vault()).balanceOf(user).mul(newAccXSushiPerShare).div(1e36).sub(
+      ), userBalance.mul(newAccXSushiPerShare).div(1e36).sub(
           userXSushiDebt[user]
       )
     );
@@ -190,9 +192,18 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
     }
     IERC20(stakedOnx).safeTransfer(user, _pending);
     lastPendingReward = curPendingReward.sub(_pending);
-  }
 
-  // Time based model for XSushi reward
+    uint256 _pendingXSushi = IERC20(vault()).balanceOf(user)
+    .mul(accXSushiPerShare)
+    .div(1e36)
+    .sub(userXSushiDebt[user]);
+    uint256 _xSushiBalance = IERC20(xSushi).balanceOf(address(this));
+    if (_xSushiBalance < _pendingXSushi) {
+      _pendingXSushi = _xSushiBalance;
+    }
+    IERC20(xSushi).safeTransfer(user, _pendingXSushi);
+    lastPendingXSushi = curPendingXSushi.sub(_pendingXSushi);
+  }
 
   // Sushiswap slp reward pool functions
 
