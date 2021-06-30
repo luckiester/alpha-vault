@@ -94,7 +94,7 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
 
   // Salvage functions
   function unsalvagableTokens(address token) public view returns (bool) {
-    return (token == rewardToken() || token == underlying() || token == vToken());
+    return (token == onx || token == stakedOnx || token == sushi || token == underlying());
   }
 
   /**
@@ -103,7 +103,7 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
   function salvage(address recipient, address token, uint256 amount) public onlyGovernance {
     // To make sure that governance cannot come in and take away the coins
     require(!unsalvagableTokens(token), "token is defined as not salvagable");
-    IBEP20(token).safeTransfer(recipient, amount);
+    IERC20(token).safeTransfer(recipient, amount);
   }
 
   // Reward time based model functions
