@@ -16,7 +16,7 @@ interface IController {
     function addVaultAndStrategy(address _vault, address _strategy) external;
     function stakeOnsenFarm(address _vault) external;
     function stakeSushiBar(address _vault) external;
-    function stakeXSushiFarm(address _vault) external;
+    function stakeOnxFarm(address _vault) external;
     function stakeOnx(address _vault) external;
     
     function hasVault(address _vault) external returns(bool);

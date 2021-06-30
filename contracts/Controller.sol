@@ -87,8 +87,8 @@ contract Controller is IController, Governable {
         IVault(_vault).stakeSushiBar();
     }
 
-    function stakeXSushiFarm(address _vault) external override onlyHardWorkerOrGovernance validVault(_vault) {
-        IVault(_vault).stakeXSushiFarm();
+    function stakeOnxFarm(address _vault) external override onlyHardWorkerOrGovernance validVault(_vault) {
+        IVault(_vault).stakeOnxFarm();
     }
 
     function stakeOnx(address _vault) external override onlyHardWorkerOrGovernance validVault(_vault) {

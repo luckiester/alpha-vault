@@ -35,7 +35,7 @@ contract BaseUpgradeableStrategy is Initializable, ControllableInit, BaseUpgrade
     address _vault,
     address _slpRewardPool,
     address _slpRewardToken,
-    address _onxXSushiFarmRewardPool,
+    address _onxOnxFarmRewardPool,
     address _onxStakingRewardPool,
     bool _sell,
     uint256 _sellFloor,
@@ -48,7 +48,7 @@ contract BaseUpgradeableStrategy is Initializable, ControllableInit, BaseUpgrade
     _setVault(_vault);
     _setSLPRewardPool(_slpRewardPool);
     _setSLPRewardToken(_slpRewardToken);
-    _setOnxXSushiRewardPool(_onxXSushiFarmRewardPool);
+    _setOnxFarmRewardPool(_onxOnxFarmRewardPool);
     _setOnxStakingRewardPool(_onxStakingRewardPool);
 
     _setSell(_sell);

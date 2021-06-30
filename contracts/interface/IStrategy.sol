@@ -17,7 +17,7 @@ interface IStrategy {
 
     function stakeOnsenFarm() external;
     function stakeSushiBar() external;
-    function stakeXSushiFarm() external;
+    function stakeOnxFarm() external;
     function stakeOnx() external;
 
     function withdrawPendingTeamFund() external;
@@ -26,4 +26,9 @@ interface IStrategy {
 
     function harvest(uint256 _denom, address sender) external;
     function depositArbCheck() external view returns(bool);
+
+    function updateAccPerShare(address user) external;
+    function pendingReward() external view returns (uint256);
+    function pendingRewardOfUser(address user) external view returns (uint256);
+    function withdrawReward(address user) external;
 }

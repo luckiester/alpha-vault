@@ -9,7 +9,7 @@ contract BaseUpgradeableStrategyStorage {
 
   bytes32 internal constant _SLP_REWARD_TOKEN_SLOT = 0x39f6508fa78bf0f8811208dd5eeef269668a89d1dc64bfffde1f9147d9071963;
   bytes32 internal constant _SLP_REWARD_POOL_SLOT = 0x38a0c4d4bce281b7791c697a1359747b8fbd89f22fbe5557828bf15a023175da;
-  bytes32 internal constant _ONX_XSUSHI_FARM_REWARD_POOL_SLOT = 0x24f4d5cb1e6d05c6fb88a551e1e1659fba608459340d9f45cc3171803a2b8552;
+  bytes32 internal constant _ONX_FARM_REWARD_POOL_SLOT = 0x24f4d5cb1e6d05c6fb88a551e1e1659fba608459340d9f45cc3171803a2b8552;
   bytes32 internal constant _ONX_STAKING_REWARD_POOL_SLOT = 0x9cb98b534f7a03048b0fe6d7d318ae0a1818bcdf1b23f010350af3399659d8cf;
   bytes32 internal constant _SELL_FLOOR_SLOT = 0xc403216a7704d160f6a3b5c3b149a1226a6080f0a5dd27b27d9ba9c022fa0afc;
   bytes32 internal constant _SELL_SLOT = 0x656de32df98753b07482576beb0d00a6b949ebf84c066c765f54f26725221bb6;
@@ -25,7 +25,7 @@ contract BaseUpgradeableStrategyStorage {
     assert(_VAULT_SLOT == bytes32(uint256(keccak256("eip1967.strategyStorage.vault")) - 1));
     assert(_SLP_REWARD_TOKEN_SLOT == bytes32(uint256(keccak256("eip1967.strategyStorage.slpRewardToken")) - 1));
     assert(_SLP_REWARD_POOL_SLOT == bytes32(uint256(keccak256("eip1967.strategyStorage.slpRewardPool")) - 1));
-    assert(_ONX_XSUSHI_FARM_REWARD_POOL_SLOT == bytes32(uint256(keccak256("eip1967.strategyStorage.onxXSushiFarmRewardPool")) - 1));
+    assert(_ONX_FARM_REWARD_POOL_SLOT == bytes32(uint256(keccak256("eip1967.strategyStorage.onxXSushiFarmRewardPool")) - 1));
     assert(_ONX_STAKING_REWARD_POOL_SLOT == bytes32(uint256(keccak256("eip1967.strategyStorage.onxStakingRewardPool")) - 1));
     assert(_SELL_FLOOR_SLOT == bytes32(uint256(keccak256("eip1967.strategyStorage.sellFloor")) - 1));
     assert(_SELL_SLOT == bytes32(uint256(keccak256("eip1967.strategyStorage.sell")) - 1));
@@ -44,6 +44,8 @@ contract BaseUpgradeableStrategyStorage {
     return getAddress(_UNDERLYING_SLOT);
   }
 
+  // Sushiswap Onsen farm reward pool functions
+
   function _setSLPRewardPool(address _address) internal {
     setAddress(_SLP_REWARD_POOL_SLOT, _address);
   }
@@ -60,13 +62,17 @@ contract BaseUpgradeableStrategyStorage {
     return getAddress(_SLP_REWARD_TOKEN_SLOT);
   }
 
-  function _setOnxXSushiRewardPool(address _address) internal {
-    setAddress(_ONX_XSUSHI_FARM_REWARD_POOL_SLOT, _address);
+  // Onx Farm Dummy Token Reward Pool Functions
+
+  function _setOnxFarmRewardPool(address _address) internal {
+    setAddress(_ONX_FARM_REWARD_POOL_SLOT, _address);
   }
 
-  function onxXSushiRewardPool() public view returns (address) {
-    return getAddress(_ONX_XSUSHI_FARM_REWARD_POOL_SLOT);
+  function onxFarmRewardPool() public view returns (address) {
+    return getAddress(_ONX_FARM_REWARD_POOL_SLOT);
   }
+
+  // Onx Staking Functions
 
   function _setOnxStakingRewardPool(address _address) internal {
     setAddress(_ONX_STAKING_REWARD_POOL_SLOT, _address);
@@ -75,6 +81,8 @@ contract BaseUpgradeableStrategyStorage {
   function onxStakingRewardPool() public view returns (address) {
     return getAddress(_ONX_STAKING_REWARD_POOL_SLOT);
   }
+
+  // ---
 
   function _setVault(address _address) internal {
     setAddress(_VAULT_SLOT, _address);

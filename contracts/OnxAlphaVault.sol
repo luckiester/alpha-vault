@@ -108,8 +108,8 @@ contract OnxAlphaVault is ERC20Upgradeable, IVault, IUpgradeSource, Controllable
     IStrategy(strategy()).stakeSushiBar();
   }
 
-  function stakeXSushiFarm() whenStrategyDefined onlyControllerOrGovernance external override {
-    IStrategy(strategy()).stakeXSushiFarm();
+  function stakeOnxFarm() whenStrategyDefined onlyControllerOrGovernance external override {
+    IStrategy(strategy()).stakeOnxFarm();
   }
 
   function stakeOnx() whenStrategyDefined onlyControllerOrGovernance external override {
@@ -122,10 +122,6 @@ contract OnxAlphaVault is ERC20Upgradeable, IVault, IUpgradeSource, Controllable
 
   function withdrawPendingTreasuryFund() whenStrategyDefined onlyControllerOrGovernance external override {
     IStrategy(strategy()).withdrawPendingTreasuryFund();
-  }
-
-  function withdrawXSushiToStrategicWallet() whenStrategyDefined onlyControllerOrGovernance external override {
-    IStrategy(strategy()).withdrawXSushiToStrategicWallet();
   }
   
   function underlyingBalanceInVault() view public override returns (uint256) {
@@ -188,6 +184,10 @@ contract OnxAlphaVault is ERC20Upgradeable, IVault, IUpgradeSource, Controllable
   function withdraw(uint256 numberOfShares) override external {
     require(totalSupply() > 0, "no shares");
     require(numberOfShares > 0, "numberOfShares zero");
+    
+    IStrategy(strategy()).updateAccPerShare(msg.sender);
+    IStrategy(strategy()).withdrawReward(msg.sender);
+
     uint256 totalSupply = totalSupply();
     _burn(msg.sender, numberOfShares);
 
@@ -217,6 +217,9 @@ contract OnxAlphaVault is ERC20Upgradeable, IVault, IUpgradeSource, Controllable
   function _deposit(uint256 amount, address sender, address beneficiary) internal {
     require(amount > 0, "deposit 0");
     require(beneficiary != address(0), "holder undefined");
+    
+    IStrategy(strategy()).updateAccPerShare(beneficiary);
+    IStrategy(strategy()).withdrawReward(beneficiary);
 
     uint256 toMint = totalSupply() == 0
         ? amount
