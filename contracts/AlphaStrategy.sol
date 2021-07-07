@@ -6,6 +6,7 @@ import "./interface/SushiBar.sol";
 import "./interface/IMasterChef.sol";
 import "./TAlphaToken.sol";
 import "./interface/IVault.sol";
+import "hardhat/console.sol";
 
 contract AlphaStrategy is BaseUpgradeableStrategy {
 
@@ -23,11 +24,9 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
 
   address private onxTeamVault = address(0xD25C0aDddD858EB291E162CD4CC984f83C8ff26f);
   address private onxTreasuryVault = address(0xe1825EAbBe12F0DF15972C2fDE0297C8053293aA);
-  address private strategicWallet = address(0xe1825EAbBe12F0DF15972C2fDE0297C8053293aA);
 
   // address onxTeamVault;
   // address onxTreasuryVault;
-  // address strategicWallet;
 
   uint256 private pendingTeamFund;
   uint256 private pendingTreasuryFund;
@@ -62,7 +61,8 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
     address _onx,
     address _stakedOnx,
     address _sushi,
-    address _xSushi
+    address _xSushi,
+    address _tAlpha
   ) public initializer {
 
     BaseUpgradeableStrategy.initialize(
@@ -89,7 +89,7 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
     xSushi = _xSushi;
     stakedOnx = _stakedOnx;
 
-    tAlpha = new TAlphaToken();
+    tAlpha = TAlphaToken(_tAlpha);
   }
 
   // Salvage functions
@@ -341,6 +341,7 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
     IERC20(sushi).safeApprove(xSushi, 0);
     IERC20(sushi).safeApprove(xSushi, sushiRewardBalance);
 
+    console.log("SushiBar stake: ", xSushi, sushiRewardBalance);
     SushiBar(xSushi).enter(sushiRewardBalance);
   }
 
@@ -474,10 +475,6 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
 
   function setOnxTreasuryFundAddress(address _address) public onlyGovernance {
     onxTreasuryVault = _address;
-  }
-
-  function setStrategicWalletAddress(address _address) public onlyGovernance {
-    strategicWallet = _address;
   }
 
   function finalizeUpgrade() external onlyGovernance {

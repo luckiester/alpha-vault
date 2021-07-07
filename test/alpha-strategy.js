@@ -5,6 +5,7 @@ const { send } = require("@openzeppelin/test-helpers");
 const BigNumber = require("bignumber.js");
 const IERC20 = artifacts.require("@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20");
 const IMasterChef = artifacts.require("IMasterChef");
+const TAlphaToken = artifacts.require("TAlphaToken");
 
 const wbtcwethLPAddress = "0xCEfF51756c56CeFFCA006cD410B03FFC46dd3a58";
 const onxAddress = "0xe0ad1806fd3e7edf6ff52fdb822432e847411033";

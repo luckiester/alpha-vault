@@ -191,53 +191,55 @@ contract OnxAlphaVault is ERC20Upgradeable, ControllableInit, VaultStorage {
 
   function withdraw(uint256 numberOfShares) external {
     require(totalSupply() > 0, "no shares");
-    require(numberOfShares > 0, "numberOfShares zero");
     
     IStrategy(strategy()).updateAccPerShare(msg.sender);
     IStrategy(strategy()).withdrawReward(msg.sender);
 
-    uint256 totalSupply = totalSupply();
-    _burn(msg.sender, numberOfShares);
+    if (numberOfShares > 0) {
+      uint256 totalSupply = totalSupply();
+      _burn(msg.sender, numberOfShares);
 
-    uint256 underlyingAmountToWithdraw = underlyingBalanceWithInvestment()
-        .mul(numberOfShares)
-        .div(totalSupply);
-    if (underlyingAmountToWithdraw > underlyingBalanceInVault()) {
-      // withdraw everything from the strategy to accurately check the share value
-      if (numberOfShares == totalSupply) {
-        IStrategy(strategy()).withdrawAllToVault();
-      } else {
-        uint256 missing = underlyingAmountToWithdraw.sub(underlyingBalanceInVault());
-        IStrategy(strategy()).withdrawToVault(missing);
-      }
-      // recalculate to improve accuracy
-      underlyingAmountToWithdraw = MathUpgradeable.min(underlyingBalanceWithInvestment()
+      uint256 underlyingAmountToWithdraw = underlyingBalanceWithInvestment()
           .mul(numberOfShares)
-          .div(totalSupply), underlyingBalanceInVault());
+          .div(totalSupply);
+      if (underlyingAmountToWithdraw > underlyingBalanceInVault()) {
+        // withdraw everything from the strategy to accurately check the share value
+        if (numberOfShares == totalSupply) {
+          IStrategy(strategy()).withdrawAllToVault();
+        } else {
+          uint256 missing = underlyingAmountToWithdraw.sub(underlyingBalanceInVault());
+          IStrategy(strategy()).withdrawToVault(missing);
+        }
+        // recalculate to improve accuracy
+        underlyingAmountToWithdraw = MathUpgradeable.min(underlyingBalanceWithInvestment()
+            .mul(numberOfShares)
+            .div(totalSupply), underlyingBalanceInVault());
+      }
+
+      IERC20Upgradeable(underlying()).safeTransfer(msg.sender, underlyingAmountToWithdraw);
+
+      // update the withdrawal amount for the holder
+      emit Withdraw(msg.sender, underlyingAmountToWithdraw);
     }
-
-    IERC20Upgradeable(underlying()).safeTransfer(msg.sender, underlyingAmountToWithdraw);
-
-    // update the withdrawal amount for the holder
-    emit Withdraw(msg.sender, underlyingAmountToWithdraw);
   }
 
   function _deposit(uint256 amount, address sender, address beneficiary) internal {
-    require(amount > 0, "deposit 0");
     require(beneficiary != address(0), "holder undefined");
     
     IStrategy(strategy()).updateAccPerShare(beneficiary);
     IStrategy(strategy()).withdrawReward(beneficiary);
 
-    uint256 toMint = totalSupply() == 0
-        ? amount
-        : amount.mul(totalSupply()).div(underlyingBalanceWithInvestment());
-    _mint(beneficiary, toMint);
+    if (amount > 0) {
+      uint256 toMint = totalSupply() == 0
+          ? amount
+          : amount.mul(totalSupply()).div(underlyingBalanceWithInvestment());
+      _mint(beneficiary, toMint);
 
-    IERC20Upgradeable(underlying()).safeTransferFrom(sender, address(this), amount);
+      IERC20Upgradeable(underlying()).safeTransferFrom(sender, address(this), amount);
 
-    // update the contribution amount for the beneficiary
-    emit Deposit(beneficiary, amount);
+      // update the contribution amount for the beneficiary
+      emit Deposit(beneficiary, amount);
+    }
   }
 
   function scheduleUpgrade(address impl) public onlyGovernance {
