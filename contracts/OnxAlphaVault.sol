@@ -13,7 +13,7 @@ import "./interface/IUpgradeSource.sol";
 import "./ControllableInit.sol";
 import "./VaultStorage.sol";
 
-contract OnxAlphaVault is ERC20Upgradeable, IVault, IUpgradeSource, ControllableInit, VaultStorage {
+contract OnxAlphaVault is ERC20Upgradeable, ControllableInit, VaultStorage {
   using SafeERC20Upgradeable for IERC20Upgradeable;
   using AddressUpgradeable for address;
   using SafeMathUpgradeable for uint256;
@@ -49,11 +49,11 @@ contract OnxAlphaVault is ERC20Upgradeable, IVault, IUpgradeSource, Controllable
     );
   }
 
-  function strategy() public view override returns(address) {
+  function strategy() public view returns(address) {
     return _strategy();
   }
 
-  function underlying() public view override returns(address) {
+  function underlying() public view returns(address) {
     return _underlying();
   }
 
@@ -78,7 +78,7 @@ contract OnxAlphaVault is ERC20Upgradeable, IVault, IUpgradeSource, Controllable
     _;
   }
 
-  function setStrategy(address _strategy) public override onlyControllerOrGovernance {
+  function setStrategy(address _strategy) public onlyControllerOrGovernance {
     require(_strategy != address(0), "empty strategy");
     require(IStrategy(_strategy).underlying() == address(underlying()), "underlying not match");
     require(IStrategy(_strategy).vault() == address(this), "strategy vault not match");
@@ -99,20 +99,20 @@ contract OnxAlphaVault is ERC20Upgradeable, IVault, IUpgradeSource, Controllable
     _;
   }
 
-  function stakeOnsenFarm() whenStrategyDefined onlyControllerOrGovernance external override {
+  function stakeOnsenFarm() whenStrategyDefined onlyControllerOrGovernance external {
     invest();
     IStrategy(strategy()).stakeOnsenFarm();
   }
 
-  function stakeSushiBar() whenStrategyDefined onlyControllerOrGovernance external override {
+  function stakeSushiBar() whenStrategyDefined onlyControllerOrGovernance external {
     IStrategy(strategy()).stakeSushiBar();
   }
 
-  function stakeOnxFarm() whenStrategyDefined onlyControllerOrGovernance external override {
+  function stakeOnxFarm() whenStrategyDefined onlyControllerOrGovernance external {
     IStrategy(strategy()).stakeOnxFarm();
   }
 
-  function stakeOnx() whenStrategyDefined onlyControllerOrGovernance external override {
+  function stakeOnx() whenStrategyDefined onlyControllerOrGovernance external {
     IStrategy(strategy()).stakeOnx();
   }
 
@@ -135,19 +135,19 @@ contract OnxAlphaVault is ERC20Upgradeable, IVault, IUpgradeSource, Controllable
     IStrategy(strategy()).stakeOnx();
   }
 
-  function withdrawPendingTeamFund() whenStrategyDefined onlyControllerOrGovernance external override {
+  function withdrawPendingTeamFund() whenStrategyDefined onlyControllerOrGovernance external {
     IStrategy(strategy()).withdrawPendingTeamFund();
   }
 
-  function withdrawPendingTreasuryFund() whenStrategyDefined onlyControllerOrGovernance external override {
+  function withdrawPendingTreasuryFund() whenStrategyDefined onlyControllerOrGovernance external {
     IStrategy(strategy()).withdrawPendingTreasuryFund();
   }
   
-  function underlyingBalanceInVault() view public override returns (uint256) {
+  function underlyingBalanceInVault() view public returns (uint256) {
     return IERC20Upgradeable(underlying()).balanceOf(address(this));
   }
   
-  function underlyingBalanceWithInvestment() view public override returns (uint256) {
+  function underlyingBalanceWithInvestment() view public returns (uint256) {
     if (address(strategy()) == address(0)) {
       // initial state, when not set
       return underlyingBalanceInVault();
@@ -155,7 +155,7 @@ contract OnxAlphaVault is ERC20Upgradeable, IVault, IUpgradeSource, Controllable
     return underlyingBalanceInVault().add(IStrategy(strategy()).investedUnderlyingBalance());
   }
 
-  function underlyingBalanceWithInvestmentForHolder(address holder) view external override returns (uint256) {
+  function underlyingBalanceWithInvestmentForHolder(address holder) view external returns (uint256) {
     if (totalSupply() == 0) {
       return 0;
     }
@@ -177,19 +177,19 @@ contract OnxAlphaVault is ERC20Upgradeable, IVault, IUpgradeSource, Controllable
     }
   }
   
-  function deposit(uint256 amount) external override defense {
+  function deposit(uint256 amount) external defense {
     _deposit(amount, msg.sender, msg.sender);
   }
   
-  function depositFor(uint256 amount, address holder) public override defense {
+  function depositFor(uint256 amount, address holder) public defense {
     _deposit(amount, msg.sender, holder);
   }
 
-  function withdrawAll() public onlyControllerOrGovernance override whenStrategyDefined {
+  function withdrawAll() public onlyControllerOrGovernance whenStrategyDefined {
     IStrategy(strategy()).withdrawAllToVault();
   }
 
-  function withdraw(uint256 numberOfShares) override external {
+  function withdraw(uint256 numberOfShares) external {
     require(totalSupply() > 0, "no shares");
     require(numberOfShares > 0, "numberOfShares zero");
     
@@ -245,7 +245,7 @@ contract OnxAlphaVault is ERC20Upgradeable, IVault, IUpgradeSource, Controllable
     _setNextImplementationTimestamp(block.timestamp.add(nextImplementationDelay()));
   }
   
-  function shouldUpgrade() external view override returns (bool, address) {
+  function shouldUpgrade() external view returns (bool, address) {
     return (
       nextImplementationTimestamp() != 0
         && block.timestamp > nextImplementationTimestamp()
@@ -254,7 +254,7 @@ contract OnxAlphaVault is ERC20Upgradeable, IVault, IUpgradeSource, Controllable
     );
   }
 
-  function finalizeUpgrade() external override onlyGovernance {
+  function finalizeUpgrade() external onlyGovernance {
     _setNextImplementation(address(0));
     _setNextImplementationTimestamp(0);
   }
