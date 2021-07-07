@@ -341,7 +341,6 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
     IERC20(sushi).safeApprove(xSushi, 0);
     IERC20(sushi).safeApprove(xSushi, sushiRewardBalance);
 
-    console.log("SushiBar stake: ", xSushi, sushiRewardBalance);
     SushiBar(xSushi).enter(sushiRewardBalance);
   }
 
