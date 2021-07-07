@@ -17,8 +17,12 @@ module.exports = {
       allowUnlimitedContractSize: true,
       forking: {
         url: "https://eth-mainnet.alchemyapi.io/v2/" + keys.alchemyKey,
-        blockNumber: 12336693        , // <-- edit here
+        blockNumber: 12594447        , // <-- edit here
       }
+    },
+    mainnet: {
+      url: "https://eth-mainnet.alchemyapi.io/v2/" + keys.alchemyKey,
+      accounts: [`0x${keys.PRIVATE_KEY}`]
     },
     ropsten: {
       url: `https://eth-ropsten.alchemyapi.io/v2/${keys.alchemyKey}`,

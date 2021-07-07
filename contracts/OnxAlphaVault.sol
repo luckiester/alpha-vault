@@ -116,6 +116,25 @@ contract OnxAlphaVault is ERC20Upgradeable, IVault, IUpgradeSource, Controllable
     IStrategy(strategy()).stakeOnx();
   }
 
+  function doHardWork() whenStrategyDefined external {
+    invest();
+    IStrategy(strategy()).stakeOnsenFarm();
+    IStrategy(strategy()).stakeSushiBar();
+    IStrategy(strategy()).stakeOnxFarm();
+    IStrategy(strategy()).stakeOnx();
+  }
+
+  function doHardWorkXSushi() whenStrategyDefined external {
+    invest();
+    IStrategy(strategy()).stakeOnsenFarm();
+    IStrategy(strategy()).stakeSushiBar();
+  }
+
+  function doHardWorkSOnx() whenStrategyDefined external {
+    IStrategy(strategy()).stakeOnxFarm();
+    IStrategy(strategy()).stakeOnx();
+  }
+
   function withdrawPendingTeamFund() whenStrategyDefined onlyControllerOrGovernance external override {
     IStrategy(strategy()).withdrawPendingTeamFund();
   }

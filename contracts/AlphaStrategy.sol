@@ -219,42 +219,6 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
     lastPendingXSushi = curPendingXSushi.sub(_pendingXSushi);
   }
 
-  // Sushiswap slp reward pool functions
-
-  function slpRewardPoolBalance() internal view returns (uint256 bal) {
-      (bal,) = IMasterChef(slpRewardPool()).userInfo(slpPoolId(), address(this));
-  }
-
-  function exitSLPRewardPool() internal {
-      uint256 bal = slpRewardPoolBalance();
-      if (bal != 0) {
-          IMasterChef(slpRewardPool()).withdraw(slpPoolId(), bal);
-      }
-  }
-
-  function claimSLPRewardPool() internal {
-      uint256 bal = slpRewardPoolBalance();
-      if (bal != 0) {
-          IMasterChef(slpRewardPool()).withdraw(slpPoolId(), 0);
-      }
-  }
-
-  function emergencyExitSLPRewardPool() internal {
-      uint256 bal = slpRewardPoolBalance();
-      if (bal != 0) {
-          IMasterChef(slpRewardPool()).emergencyWithdraw(slpPoolId());
-      }
-  }
-
-  function enterSLPRewardPool() internal {
-    uint256 entireBalance = IERC20(underlying()).balanceOf(address(this));
-    if (entireBalance > 0) {
-      IERC20(underlying()).safeApprove(slpRewardPool(), 0);
-      IERC20(underlying()).safeApprove(slpRewardPool(), entireBalance);
-      IMasterChef(slpRewardPool()).deposit(slpPoolId(), entireBalance);
-    }
-  }
-
   /*
   *   In case there are some issues discovered about the pool or underlying asset
   *   Governance can exit the pool properly
@@ -318,7 +282,41 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
     return slpRewardPoolBalance().add(IERC20(underlying()).balanceOf(address(this)));
   }
 
-  // OnsenFarm functions
+  // OnsenFarm functions - Sushiswap slp reward pool functions
+
+  function slpRewardPoolBalance() internal view returns (uint256 bal) {
+      (bal,) = IMasterChef(slpRewardPool()).userInfo(slpPoolId(), address(this));
+  }
+
+  function exitSLPRewardPool() internal {
+      uint256 bal = slpRewardPoolBalance();
+      if (bal != 0) {
+          IMasterChef(slpRewardPool()).withdraw(slpPoolId(), bal);
+      }
+  }
+
+  function claimSLPRewardPool() internal {
+      uint256 bal = slpRewardPoolBalance();
+      if (bal != 0) {
+          IMasterChef(slpRewardPool()).withdraw(slpPoolId(), 0);
+      }
+  }
+
+  function emergencyExitSLPRewardPool() internal {
+      uint256 bal = slpRewardPoolBalance();
+      if (bal != 0) {
+          IMasterChef(slpRewardPool()).emergencyWithdraw(slpPoolId());
+      }
+  }
+
+  function enterSLPRewardPool() internal {
+    uint256 entireBalance = IERC20(underlying()).balanceOf(address(this));
+    if (entireBalance > 0) {
+      IERC20(underlying()).safeApprove(slpRewardPool(), 0);
+      IERC20(underlying()).safeApprove(slpRewardPool(), entireBalance);
+      IMasterChef(slpRewardPool()).deposit(slpPoolId(), entireBalance);
+    }
+  }
 
   function stakeOnsenFarm() external onlyNotPausedInvesting restricted {
     enterSLPRewardPool();
@@ -349,18 +347,21 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
   // Onx Farm Dummy Token Pool functions
 
   function _enterOnxFarmRewardPool() internal {
-    uint256 entireBalance = IERC20(xSushi).balanceOf(address(this));
-    tAlpha.mint(address(this), entireBalance);
-    IERC20(tAlpha).safeApprove(onxFarmRewardPool(), 0);
-    IERC20(tAlpha).safeApprove(onxFarmRewardPool(), entireBalance);
-    IMasterChef(onxFarmRewardPool()).deposit(onxFarmRewardPoolId(), entireBalance);
+    uint256 bal = _onxFarmRewardPoolBalance();
+    uint256 entireBalance = IERC20(vault()).totalSupply();
+    if (bal == 0) {
+      tAlpha.mint(address(this), entireBalance);
+      IERC20(tAlpha).safeApprove(onxFarmRewardPool(), 0);
+      IERC20(tAlpha).safeApprove(onxFarmRewardPool(), entireBalance);
+      IMasterChef(onxFarmRewardPool()).deposit(onxFarmRewardPoolId(), entireBalance);
+    }
   }
 
   function _onxFarmRewardPoolBalance() internal view returns (uint256 bal) {
       (bal,) = IMasterChef(onxFarmRewardPool()).userInfo(onxFarmRewardPoolId(), address(this));
   }
 
-  function _exitOnxFarmRewardPool() internal {
+  function exitOnxFarmRewardPool() external restricted {
       uint256 bal = _onxFarmRewardPoolBalance();
       if (bal != 0) {
           IMasterChef(onxFarmRewardPool()).withdraw(onxFarmRewardPoolId(), bal);

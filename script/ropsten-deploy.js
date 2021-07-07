@@ -47,7 +47,7 @@ async function main() {
 
   // Deploy VaultProxy Contract
   const VaultProxy = await ethers.getContractFactory("VaultProxy");
-  const vaultProxy = await VaultProxy.deploy(vaultNew.address, {gasLimit: 250000});
+  const vaultProxy = await VaultProxy.deploy(vaultNew.address, {gasLimit: 500000});
   // const vaultProxy = await upgrades.deployProxy(VaultProxy, [vaultNew.address]);
   // await vaultProxy.deployed();
 
