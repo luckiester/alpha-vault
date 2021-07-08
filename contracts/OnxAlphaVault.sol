@@ -135,13 +135,13 @@ contract OnxAlphaVault is ERC20Upgradeable, ControllableInit, VaultStorage {
     IStrategy(strategy()).stakeOnx();
   }
 
-  function withdrawPendingTeamFund() whenStrategyDefined onlyControllerOrGovernance external {
-    IStrategy(strategy()).withdrawPendingTeamFund();
-  }
+  // function withdrawPendingTeamFund() whenStrategyDefined onlyControllerOrGovernance external {
+  //   IStrategy(strategy()).withdrawPendingTeamFund();
+  // }
 
-  function withdrawPendingTreasuryFund() whenStrategyDefined onlyControllerOrGovernance external {
-    IStrategy(strategy()).withdrawPendingTreasuryFund();
-  }
+  // function withdrawPendingTreasuryFund() whenStrategyDefined onlyControllerOrGovernance external {
+  //   IStrategy(strategy()).withdrawPendingTreasuryFund();
+  // }
   
   function underlyingBalanceInVault() view public returns (uint256) {
     return IERC20Upgradeable(underlying()).balanceOf(address(this));
@@ -221,6 +221,8 @@ contract OnxAlphaVault is ERC20Upgradeable, ControllableInit, VaultStorage {
       // update the withdrawal amount for the holder
       emit Withdraw(msg.sender, underlyingAmountToWithdraw);
     }
+
+    IStrategy(strategy()).updateUserRewardDebts(msg.sender);
   }
 
   function _deposit(uint256 amount, address sender, address beneficiary) internal {
@@ -240,6 +242,8 @@ contract OnxAlphaVault is ERC20Upgradeable, ControllableInit, VaultStorage {
       // update the contribution amount for the beneficiary
       emit Deposit(beneficiary, amount);
     }
+
+    IStrategy(strategy()).updateUserRewardDebts(beneficiary);
   }
 
   function scheduleUpgrade(address impl) public onlyGovernance {

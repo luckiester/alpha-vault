@@ -17,7 +17,8 @@ module.exports = {
       allowUnlimitedContractSize: true,
       forking: {
         url: "https://eth-mainnet.alchemyapi.io/v2/" + keys.alchemyKey,
-        blockNumber: 12594447        , // <-- edit here
+        // blockNumber: 12594447        , // <-- edit here
+        blockNumber: 12786962        , // <-- edit here
       }
     },
     mainnet: {

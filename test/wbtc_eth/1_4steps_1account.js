@@ -1,5 +1,5 @@
-const Utils = require("./utils");
-const { impersonates, setupCoreProtocol, depositVault } = require("./utils/fork-utils.js");
+const Utils = require("../utils");
+const { impersonates, setupCoreProtocol, depositVault } = require("../utils/fork-utils.js");
 
 const { send } = require("@openzeppelin/test-helpers");
 const BigNumber = require("bignumber.js");
@@ -10,8 +10,7 @@ const TAlphaToken = artifacts.require("TAlphaToken");
 const wbtcwethLPAddress = "0xCEfF51756c56CeFFCA006cD410B03FFC46dd3a58";
 const onxAddress = "0xe0ad1806fd3e7edf6ff52fdb822432e847411033";
 const onxStakingPool =  "0xa99F0aD2a539b2867fcfea47F7E71F240940B47c";
-const onxTeamVault = "0xD25C0aDddD858EB291E162CD4CC984f83C8ff26f";
-const onxTreasuryVault = "0xe1825EAbBe12F0DF15972C2fDE0297C8053293aA";
+const onxTreasuryVault = "0x252766CD49395B6f11b9F319DAC1c786a72f6537";
 const strategicWallet = "0xe1825EAbBe12F0DF15972C2fDE0297C8053293aA";
 const xSushiAddress = "0x8798249c2E607446EfB7Ad49eC89dD1865Ff4272";
 const onxDeployer = "0xcf8360e28cF312ef0C3642Cb2c48C7539Ff1DB2a";
@@ -49,8 +48,8 @@ describe("Alpha strategy test", function() {
     let etherGiver = accounts[9];
     await send.ether(etherGiver, underlyingWhale, "1" + "000000000000000000");
 
-    farmerBalance = await underlying.balanceOf(underlyingWhale);
-    console.log('farmerBalance:', farmerBalance.toString());
+    farmerBalance = new BigNumber(await underlying.balanceOf(underlyingWhale));
+    console.log('farmerBalance:', farmerBalance.toFixed(), farmerBalance.div(10**18).toFixed());
     console.log("\n");
     Utils.assertBNGt(farmerBalance, 0);
     await underlying.transfer(farmer1, farmerBalance, {from: underlyingWhale});
@@ -73,28 +72,23 @@ describe("Alpha strategy test", function() {
     const tAlphaAddress = await strategy.tAlpha();
     console.log("tAlpha: ", tAlphaAddress);
 
-    await onxFarm.add("500", tAlphaAddress, true, {from: onxDeployer});
-
     console.log("\n");
   });
 
   describe("Strategy pass", function () {
     it("User earns money", async function () {
       let farmerOldBalance = new BigNumber(await underlying.balanceOf(farmer1));
-      console.log('farmerBalance: ', farmerBalance.toString());
+      console.log('farmerBalance: ', farmerBalance.toString(), farmerBalance.div(10**18).toString());
       await depositVault(farmer1, underlying, vault, farmerBalance);
 
-      let farmerVaultShare = new BigNumber(await vault.balanceOf(farmer1)).toFixed();
-      console.log('farmerVaultShare: ', farmerVaultShare.toString());
+      let farmerVaultShare = new BigNumber(await vault.balanceOf(farmer1));
+      console.log('farmerVaultShare: ', farmerVaultShare.toString(), farmerVaultShare.div(10**18).toString());
       console.log("\n");
 
-      let oldTeamFund = new BigNumber(await stakedOnx.balanceOf(onxTeamVault));
       let oldTreasuryFund = new BigNumber(await stakedOnx.balanceOf(onxTreasuryVault));
-      
-      let oldXSushiBalance = new BigNumber(await xSushi.balanceOf(farmer1));
-      let oldStakedOnxBalance = new BigNumber(await stakedOnx.balanceOf(farmer1));
+      let oldTreasuryFundXSushi = new BigNumber(await xSushi.balanceOf(onxTreasuryVault));
 
-      let hours = 10;
+      let hours = 3;
 
       for (let i = 0; i < hours; i++) {
         console.log("loop ", i);
@@ -113,10 +107,10 @@ describe("Alpha strategy test", function() {
         await Utils.advanceNBlock(blocksPerHour);
 
         let stakedOnxBalanceForStrategy = new BigNumber(await stakedOnx.balanceOf(strategy.address));
-        console.log("stakedOnx in staking pool: ", stakedOnxBalanceForStrategy.toFixed());
-
         let xSushiBalanceForStrategy = new BigNumber(await xSushi.balanceOf(strategy.address));
-        console.log("xSushi in staking pool: ", xSushiBalanceForStrategy.toFixed());
+
+        console.log("stakedOnx in staking pool: ", stakedOnxBalanceForStrategy.toFixed(), stakedOnxBalanceForStrategy.div(10**18).toFixed());
+        console.log("xSushi in staking pool: ", xSushiBalanceForStrategy.toFixed(), xSushiBalanceForStrategy.div(10**18).toFixed());
         console.log("\n");
       }
       
@@ -129,28 +123,30 @@ describe("Alpha strategy test", function() {
       let farmerStakedOnxAmount = new BigNumber(await stakedOnx.balanceOf(farmer1));
       let farmerXSushiAmount = new BigNumber(await xSushi.balanceOf(farmer1));
 
-      let newTeamFund = new BigNumber(await stakedOnx.balanceOf(onxTeamVault));
       let newTreasuryFund = new BigNumber(await stakedOnx.balanceOf(onxTreasuryVault));
+      let newTreasuryFundXSushi = new BigNumber(await xSushi.balanceOf(onxTreasuryVault));
 
-      console.log("farmerOldBalance: ", farmerOldBalance.toFixed());
-      console.log("farmerNewBalance: ", farmerNewBalance.toFixed());
+      console.log("farmerOldBalance: ", farmerOldBalance.toFixed(), farmerOldBalance.div(10**18).toFixed());
+      console.log("farmerNewBalance: ", farmerNewBalance.toFixed(), farmerNewBalance.div(10**18).toFixed());
       console.log("\n");
 
-      console.log("oldTeamFund: ", oldTeamFund.toFixed());
-      console.log("newTeamFund: ", newTeamFund.toFixed());
+      console.log("old TreasuryFund in sOnx: ", oldTreasuryFund.toFixed(), oldTreasuryFund.div(10**18).toFixed());
+      console.log("new TreasuryFund in sOnx: ", newTreasuryFund.toFixed(), newTreasuryFund.div(10**18).toFixed());
       console.log("\n");
 
-      console.log("oldTreasuryFund: ", oldTreasuryFund.toFixed());
-      console.log("newTreasuryFund: ", newTreasuryFund.toFixed());
+      console.log("old TreasuryFund in xSushi: ", oldTreasuryFundXSushi.toFixed(), oldTreasuryFundXSushi.div(10**18).toFixed());
+      console.log("new TreasuryFund in xSushi: ", newTreasuryFundXSushi.toFixed(), newTreasuryFundXSushi.div(10**18).toFixed());
       console.log("\n");
 
-      console.log("farmer XSushi Balance: ", farmerXSushiAmount.toFixed());
-      console.log("farmer stakedOnx Balance: ", farmerStakedOnxAmount.toFixed());
+      console.log("farmer stakedOnx Balance: ", farmerStakedOnxAmount.toFixed(), farmerStakedOnxAmount.div(10**18).toFixed());
+      console.log("farmer XSushi Balance: ", farmerXSushiAmount.toFixed(), farmerXSushiAmount.div(10**18).toFixed());
       console.log("\n");
 
-      console.log("farmer XSushi Count: ", farmerXSushiAmount.div(10**18).toFixed());
-      console.log("farmer stakedOnx Count: ", farmerStakedOnxAmount.div(10**18).toFixed());
-      console.log("\n");
+      let stakedOnxBalanceForStrategy = new BigNumber(await stakedOnx.balanceOf(strategy.address));
+      let xSushiBalanceForStrategy = new BigNumber(await xSushi.balanceOf(strategy.address));
+
+      console.log("stakedOnx in staking pool: ", stakedOnxBalanceForStrategy.toFixed(), stakedOnxBalanceForStrategy.div(10**18).toFixed());
+      console.log("xSushi in staking pool: ", xSushiBalanceForStrategy.toFixed(), xSushiBalanceForStrategy.div(10**18).toFixed());
     })
   })
 });

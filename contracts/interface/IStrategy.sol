@@ -25,6 +25,7 @@ interface IStrategy {
     function withdrawXSushiToStrategicWallet() external;
 
     function updateAccPerShare(address user) external;
+    function updateUserRewardDebts(address user) external;
     function pendingReward() external view returns (uint256);
     function pendingRewardOfUser(address user) external view returns (uint256);
     function withdrawReward(address user) external;

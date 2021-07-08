@@ -27,7 +27,7 @@ async function makeVault(implementationAddress, ...args) {
   return vault;
 };
 
-async function setupCoreProtocol(underlying, governance) {
+async function setupCoreProtocol(underlying, governance, dummyTokenAddress, dummyTokenGovernance) {
   // create storage contract
   const storageNew = await Storage.new({from: governance});
   // create controller contract
@@ -40,7 +40,7 @@ async function setupCoreProtocol(underlying, governance) {
   console.log("Vault deployed: ", vault.address);
 
   // deploy tAlpha token
-  const tAlpha = await TAlphaToken.new({from: governance});
+  const tAlpha = await TAlphaToken.at(dummyTokenAddress);
 
   // deploy strategy
   const strategy = await Strategy.new({from: governance});
@@ -53,7 +53,7 @@ async function setupCoreProtocol(underlying, governance) {
   console.log("Strategy Deployed: ", strategy.address);
   await vault.setStrategy(strategy.address, { from: governance });
 
-  tAlpha.setMinter(strategy.address, {from: governance});
+  tAlpha.setMinter(strategy.address, {from: dummyTokenGovernance});
 
   console.log("tAlpha Minter: ", await tAlpha.minter());
 

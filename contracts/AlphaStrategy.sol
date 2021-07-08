@@ -22,14 +22,12 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
   address public sushi;
   address public xSushi;
 
-  address private onxTeamVault = address(0xD25C0aDddD858EB291E162CD4CC984f83C8ff26f);
-  address private onxTreasuryVault = address(0xe1825EAbBe12F0DF15972C2fDE0297C8053293aA);
+  // address private onxTeamVault = address(0xD25C0aDddD858EB291E162CD4CC984f83C8ff26f);
+  // address private onxTreasuryVault = address(0xe1825EAbBe12F0DF15972C2fDE0297C8053293aA);
+  address private treasury = address(0x252766CD49395B6f11b9F319DAC1c786a72f6537);
 
-  // address onxTeamVault;
-  // address onxTreasuryVault;
-
-  uint256 private pendingTeamFund;
-  uint256 private pendingTreasuryFund;
+  // uint256 private pendingTeamFund;
+  // uint256 private pendingTreasuryFund;
 
   mapping(address => uint256) public userRewardDebt;
 
@@ -42,6 +40,9 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
   uint256 public accXSushiPerShare;
   uint256 public lastPendingXSushi;
   uint256 public curPendingXSushi;
+
+  uint256 keepFee = 10;
+  uint256 keepFeeMax = 100;
 
   TAlphaToken public tAlpha;
 
@@ -92,6 +93,14 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
     tAlpha = TAlphaToken(_tAlpha);
   }
 
+  // keep fee functions
+  function setKeepFee(uint256 _fee, uint256 _feeMax) external onlyGovernance {
+    require(_feeMax > 0, "feeMax should be bigger than zero");
+    require(_fee < _feeMax, "fee can't be bigger than feeMax");
+    keepFee = _fee;
+    keepFeeMax = _feeMax;
+  }
+
   // Salvage functions
   function unsalvagableTokens(address token) public view returns (bool) {
     return (token == onx || token == stakedOnx || token == sushi || token == underlying());
@@ -114,6 +123,11 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
   }
 
   function updateAccPerShare(address user) public onlyVault {
+    updateAccSOnxPerShare(user);
+    updateAccXSushiPerShare(user);
+  }
+
+  function updateAccSOnxPerShare(address user) internal {
     // For xOnx
     curPendingReward = pendingReward();
     uint256 totalSupply = IERC20(vault()).totalSupply();
@@ -135,10 +149,12 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
     accRewardPerShare = accRewardPerShare.add(
       (addedReward.mul(1e36)).div(totalSupply)
     );
+  }
 
+  function updateAccXSushiPerShare(address user) internal {
     // For XSushi
-
     curPendingXSushi = pendingXSushi();
+    uint256 totalSupply = IERC20(vault()).totalSupply();
 
     if (lastPendingXSushi > 0 && curPendingXSushi < lastPendingXSushi) {
       curPendingXSushi = 0;
@@ -153,10 +169,20 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
       return;
     }
 
-    addedReward = curPendingXSushi.sub(lastPendingXSushi);
+    uint256 addedReward = curPendingXSushi.sub(lastPendingXSushi);
     accXSushiPerShare = accXSushiPerShare.add(
       (addedReward.mul(1e36)).div(totalSupply)
     );
+  }
+
+  function updateUserRewardDebts(address user) public onlyVault {
+    userRewardDebt[user] = IERC20(vault()).balanceOf(user)
+    .mul(accRewardPerShare)
+    .div(1e36);
+
+    userXSushiDebt[user] = IERC20(vault()).balanceOf(user)
+    .mul(accXSushiPerShare)
+    .div(1e36);
   }
 
   function pendingReward() public view returns (uint256) {
@@ -168,34 +194,51 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
   }
 
   function pendingRewardOfUser(address user) external view returns (uint256, uint256) {
+    return (pendingSOnxOfUser(user), pendingXSushiOfUser(user));
+  }
+
+  function pendingXSushiOfUser(address user) public view returns (uint256) {
     uint256 totalSupply = IERC20(vault()).totalSupply();
     uint256 userBalance = IERC20(vault()).balanceOf(user);
-    if (totalSupply == 0) return (0, 0);
+    if (totalSupply == 0) return 0;
 
+    // pending xSushi
+    uint256 allPendingXSushi = pendingXSushi();
+    if (allPendingXSushi < lastPendingXSushi) return 0;
+    uint256 addedReward = allPendingXSushi.sub(lastPendingXSushi);
+    uint256 newAccXSushiPerShare = accXSushiPerShare.add(
+        (addedReward.mul(1e36)).div(totalSupply)
+    );
+    uint256 _pendingXSushi = userBalance.mul(newAccXSushiPerShare).div(1e36).sub(
+      userXSushiDebt[user]
+    );
+    _pendingXSushi = _pendingXSushi.sub(_pendingXSushi.mul(keepFee).div(keepFeeMax));
+
+    return _pendingXSushi;
+  }
+
+  function pendingSOnxOfUser(address user) public view returns (uint256) {
+    uint256 totalSupply = IERC20(vault()).totalSupply();
+    uint256 userBalance = IERC20(vault()).balanceOf(user);
+    if (totalSupply == 0) return 0;
+
+    // pending sOnx
     uint256 allPendingReward = pendingReward();
-    if (allPendingReward < lastPendingReward) return (0, 0);
+    if (allPendingReward < lastPendingReward) return 0;
     uint256 addedReward = allPendingReward.sub(lastPendingReward);
     uint256 newAccRewardPerShare = accRewardPerShare.add(
         (addedReward.mul(1e36)).div(totalSupply)
     );
-
-    uint256 allPendingXSushi = pendingXSushi();
-    if (allPendingXSushi < lastPendingXSushi) return (0, 0);
-    addedReward = allPendingXSushi.sub(lastPendingXSushi);
-    uint256 newAccXSushiPerShare = accXSushiPerShare.add(
-        (addedReward.mul(1e36)).div(totalSupply)
+    uint256 _pendingReward = userBalance.mul(newAccRewardPerShare).div(1e36).sub(
+      userRewardDebt[user]
     );
+    _pendingReward = _pendingReward.sub(_pendingReward.mul(keepFee).div(keepFeeMax));
 
-    return (
-      userBalance.mul(newAccRewardPerShare).div(1e36).sub(
-          userRewardDebt[user]
-      ), userBalance.mul(newAccXSushiPerShare).div(1e36).sub(
-          userXSushiDebt[user]
-      )
-    );
+    return _pendingReward;
   }
 
   function withdrawReward(address user) public onlyVault {
+    // withdraw pending SOnx
     uint256 _pending = IERC20(vault()).balanceOf(user)
     .mul(accRewardPerShare)
     .div(1e36)
@@ -204,9 +247,16 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
     if (_balance < _pending) {
       _pending = _balance;
     }
+    // keep fee for treasury
+    uint256 _fee = _pending.mul(keepFee).div(keepFeeMax);
+    IERC20(stakedOnx).safeTransfer(treasury, _fee);
+    lastPendingReward = curPendingReward.sub(_fee);
+    // send reward to user
+    _pending = _pending.sub(_fee);
     IERC20(stakedOnx).safeTransfer(user, _pending);
-    lastPendingReward = curPendingReward.sub(_pending);
+    lastPendingReward = lastPendingReward.sub(_pending);
 
+    // withdraw pending XSushi
     uint256 _pendingXSushi = IERC20(vault()).balanceOf(user)
     .mul(accXSushiPerShare)
     .div(1e36)
@@ -215,8 +265,14 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
     if (_xSushiBalance < _pendingXSushi) {
       _pendingXSushi = _xSushiBalance;
     }
+    // keep fee for treasury
+    uint256 _feeXSushi = _pendingXSushi.mul(keepFee).div(keepFeeMax);
+    IERC20(xSushi).safeTransfer(treasury, _feeXSushi);
+    lastPendingXSushi = curPendingXSushi.sub(_feeXSushi);
+    // send reward to user
+    _pendingXSushi = _pendingXSushi.sub(_feeXSushi);
     IERC20(xSushi).safeTransfer(user, _pendingXSushi);
-    lastPendingXSushi = curPendingXSushi.sub(_pendingXSushi);
+    lastPendingXSushi = lastPendingXSushi.sub(_pendingXSushi);
   }
 
   /*
@@ -403,37 +459,37 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
     SushiBar(onxStakingRewardPool()).enter(onxRewardBalance);
   }
 
-  function withdrawPendingTeamFund() external restricted {
-    if (pendingTeamFund > 0) {
-      uint256 balance = IERC20(stakedOnx).balanceOf(address(this));
+  // function withdrawPendingTeamFund() external restricted {
+  //   if (pendingTeamFund > 0) {
+  //     uint256 balance = IERC20(stakedOnx).balanceOf(address(this));
 
-      if (pendingTeamFund > balance) {
-        pendingTeamFund = balance;
-      }
+  //     if (pendingTeamFund > balance) {
+  //       pendingTeamFund = balance;
+  //     }
 
-      IERC20(stakedOnx).safeApprove(onxTeamVault, 0);
-      IERC20(stakedOnx).safeApprove(onxTeamVault, pendingTeamFund);
-      IERC20(stakedOnx).safeTransfer(onxTeamVault, pendingTeamFund);
+  //     IERC20(stakedOnx).safeApprove(onxTeamVault, 0);
+  //     IERC20(stakedOnx).safeApprove(onxTeamVault, pendingTeamFund);
+  //     IERC20(stakedOnx).safeTransfer(onxTeamVault, pendingTeamFund);
 
-      pendingTeamFund = 0;
-    }
-  }
+  //     pendingTeamFund = 0;
+  //   }
+  // }
 
-  function withdrawPendingTreasuryFund() external restricted {
-    if (pendingTreasuryFund > 0) {
-      uint256 balance = IERC20(stakedOnx).balanceOf(address(this));
+  // function withdrawPendingTreasuryFund() external restricted {
+  //   if (pendingTreasuryFund > 0) {
+  //     uint256 balance = IERC20(stakedOnx).balanceOf(address(this));
 
-      if (pendingTreasuryFund > balance) {
-        pendingTreasuryFund = balance;
-      }
+  //     if (pendingTreasuryFund > balance) {
+  //       pendingTreasuryFund = balance;
+  //     }
 
-      IERC20(stakedOnx).safeApprove(onxTreasuryVault, 0);
-      IERC20(stakedOnx).safeApprove(onxTreasuryVault, pendingTreasuryFund);
-      IERC20(stakedOnx).safeTransfer(onxTreasuryVault, pendingTreasuryFund);
+  //     IERC20(stakedOnx).safeApprove(onxTreasuryVault, 0);
+  //     IERC20(stakedOnx).safeApprove(onxTreasuryVault, pendingTreasuryFund);
+  //     IERC20(stakedOnx).safeTransfer(onxTreasuryVault, pendingTreasuryFund);
 
-      pendingTreasuryFund = 0;
-    }
-  }
+  //     pendingTreasuryFund = 0;
+  //   }
+  // }
 
   /**
   * Can completely disable claiming UNI rewards and selling. Good for emergency withdraw in the
@@ -468,12 +524,16 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
     return getUint256(_ONX_FARM_POOLID_SLOT);
   }
 
-  function setOnxTeamFundAddress(address _address) public onlyGovernance {
-    onxTeamVault = _address;
-  }
+  // function setOnxTeamFundAddress(address _address) public onlyGovernance {
+  //   onxTeamVault = _address;
+  // }
+
+  // function setOnxTreasuryFundAddress(address _address) public onlyGovernance {
+  //   onxTreasuryVault = _address;
+  // }
 
   function setOnxTreasuryFundAddress(address _address) public onlyGovernance {
-    onxTreasuryVault = _address;
+    treasury = _address;
   }
 
   function finalizeUpgrade() external onlyGovernance {
