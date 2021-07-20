@@ -92,22 +92,13 @@ describe("Alpha strategy test", function() {
       let oldTreasuryFund = new BigNumber(await stakedOnx.balanceOf(onxTreasuryVault));
       let oldTreasuryFundXSushi = new BigNumber(await xSushi.balanceOf(onxTreasuryVault));
 
-      let hours = 3;
+      let hours = 12;
 
       for (let i = 0; i < hours; i++) {
         console.log("loop ", i);
 
         let blocksPerHour = 2400;
-        await controller.stakeOnsenFarm(vault.address, {from: governance});
-        await Utils.advanceNBlock(blocksPerHour);
-
-        await controller.stakeSushiBar(vault.address, {from: governance});
-        await Utils.advanceNBlock(blocksPerHour);
-
-        await controller.stakeOnxFarm(vault.address, {from: governance});
-        await Utils.advanceNBlock(blocksPerHour);
-
-        await controller.stakeOnx(vault.address, {from: governance});
+        await vault.doHardWork();
         await Utils.advanceNBlock(blocksPerHour);
 
         let stakedOnxBalanceForStrategy = new BigNumber(await stakedOnx.balanceOf(strategy.address));

@@ -22,12 +22,7 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
   address public sushi;
   address public xSushi;
 
-  // address private onxTeamVault = address(0xD25C0aDddD858EB291E162CD4CC984f83C8ff26f);
-  // address private onxTreasuryVault = address(0xe1825EAbBe12F0DF15972C2fDE0297C8053293aA);
   address private treasury = address(0x252766CD49395B6f11b9F319DAC1c786a72f6537);
-
-  // uint256 private pendingTeamFund;
-  // uint256 private pendingTreasuryFund;
 
   mapping(address => uint256) public userRewardDebt;
 
@@ -459,38 +454,6 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
     SushiBar(onxStakingRewardPool()).enter(onxRewardBalance);
   }
 
-  // function withdrawPendingTeamFund() external restricted {
-  //   if (pendingTeamFund > 0) {
-  //     uint256 balance = IERC20(stakedOnx).balanceOf(address(this));
-
-  //     if (pendingTeamFund > balance) {
-  //       pendingTeamFund = balance;
-  //     }
-
-  //     IERC20(stakedOnx).safeApprove(onxTeamVault, 0);
-  //     IERC20(stakedOnx).safeApprove(onxTeamVault, pendingTeamFund);
-  //     IERC20(stakedOnx).safeTransfer(onxTeamVault, pendingTeamFund);
-
-  //     pendingTeamFund = 0;
-  //   }
-  // }
-
-  // function withdrawPendingTreasuryFund() external restricted {
-  //   if (pendingTreasuryFund > 0) {
-  //     uint256 balance = IERC20(stakedOnx).balanceOf(address(this));
-
-  //     if (pendingTreasuryFund > balance) {
-  //       pendingTreasuryFund = balance;
-  //     }
-
-  //     IERC20(stakedOnx).safeApprove(onxTreasuryVault, 0);
-  //     IERC20(stakedOnx).safeApprove(onxTreasuryVault, pendingTreasuryFund);
-  //     IERC20(stakedOnx).safeTransfer(onxTreasuryVault, pendingTreasuryFund);
-
-  //     pendingTreasuryFund = 0;
-  //   }
-  // }
-
   /**
   * Can completely disable claiming UNI rewards and selling. Good for emergency withdraw in the
   * simplest possible way.
@@ -523,14 +486,6 @@ contract AlphaStrategy is BaseUpgradeableStrategy {
   function onxFarmRewardPoolId() public view returns (uint256) {
     return getUint256(_ONX_FARM_POOLID_SLOT);
   }
-
-  // function setOnxTeamFundAddress(address _address) public onlyGovernance {
-  //   onxTeamVault = _address;
-  // }
-
-  // function setOnxTreasuryFundAddress(address _address) public onlyGovernance {
-  //   onxTreasuryVault = _address;
-  // }
 
   function setOnxTreasuryFundAddress(address _address) public onlyGovernance {
     treasury = _address;
